@@ -1,0 +1,31 @@
+project:
+  type: website
+  output-dir: docs
+
+author: "Josef Fruehwald"
+
+website:
+  title: "Statistical Rethinking Workthrough Blog"
+  navbar:
+    right:
+      - about.qmd
+  sidebar:
+    contents: posts
+
+format:
+  html:
+    theme: sandstone
+    css: styles.css
+    code-annotations: hover
+    tbl-cap-location: margin
+    fig-width: 6
+    fig-height: 4
+    fig-cap-location: margin
+
+knitr:
+  opts_chunk:
+    message: false
+    warning: false
+
+editor: visual
+

@@ -1,0 +1,32 @@
+---
+title: "01 Golem of Prague Chapter"
+date: 2023-05-09
+order: 2
+tags: 
+  - "chapter 1"
+---
+
+::: callout-note
+## Listening
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/5kwUlMGSkXQmpDK6LL5PUq?utm_source=generator&amp;theme=0" width="100%" height="152" frameBorder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+
+</iframe>
+:::
+
+## Hypotheses != Models != Statistics
+
+```{mermaid}
+flowchart LR
+  H0("H0<br>Evolution is Neutral") <--> P0A["Process<br>Neutral Equilibrium"] 
+  H0 <--> P0B["Process<br>Neutral Non-Equilibrium"]
+  H1("H1<br>Selection Matters") <--> P1A["Process<br>Constant Selection"]
+  H1 <--> P1B["Process<br>Fluctuating Selection"]
+  
+  P0A <--> MII(["Model2<br>Power Law"])
+  P1B <--> MII
+  P1A <--> MIII(["Model3<br>'something different'"])
+  P0B <--> MI(["Model1<br>another thing"])
+```
+
+Rejecting Model 1 does not result in a unique identification of a process, or even a hypothesis.

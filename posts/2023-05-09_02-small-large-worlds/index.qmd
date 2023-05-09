@@ -1,0 +1,139 @@
+---
+title: "02 Small Worlds and Large Worlds"
+date: 2023-05-09
+order: 3
+tags: 
+  - "chapter 2"
+---
+
+::: callout-note
+## listening
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/5VJM0bWDzg3S2eN7LzAYPa?utm_source=generator&amp;theme=0" width="100%" height="152" frameBorder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+
+</iframe>
+:::
+
+In the analogy, models are "Small", self-contained worlds.
+
+> Within the small world, all possibilities are nominated.
+
+## Garden of forking paths.
+
+I was thinking of working out the probabilities by doing random sampling...
+
+```{r}
+library(tidyverse)
+library(gt)
+library(patchwork)
+library(here)
+source(here("_defaults.R"))
+```
+
+Generating the marble dataframe
+
+```{r}
+tibble(
+  blue_marbs = 0:4,
+  white_marbs = 4 - blue_marbs
+) |> 
+  rowwise() |> 
+  mutate(
+    marbles = list(c(rep("blue", blue_marbs), rep("white", white_marbs)))
+  ) -> 
+  marbles
+```
+
+```{r}
+#| label: tbl-marb-sampling
+#| tbl-cap: "The marble sampling distributions"
+marbles |> 
+  gt()
+```
+
+In retrospect, I'm glad I did this, because I thought we were sampling *without* replacement.
+
+Here's a function that will repeatedly sample from a set of marbles, and compare the result to a reference group.
+
+```{r}
+sampling_df <- function(marbles, n = 1000, size = 3, pattern = c("blue", "white", "blue")){
+  sampling_tibble <- tibble(samp = 1:n)    #<1>
+  sampling_tibble |> 
+    mutate(
+      chosen = map(samp, ~sample(marbles, size = 3, replace = T)), #<2>
+      match = map_lgl(chosen, ~all(.x == pattern))                 #<3>
+    ) |> 
+    summarise(prop_match = mean(match))->                          #<4>
+    sampling_tibble
+  return(sampling_tibble)
+}
+```
+
+1.  I'll capture everything within a tibble.
+2.  Rowwise, sample from `marbles` with replacement.
+3.  Return `T` or `F` if the sequence matches the pattern exactly.
+4.  The `mean()` of the `T`, `F` column to get the proportion that match.
+
+```{r}
+sampling_df(
+  marbles = marbles$marbles[[4]],
+  n = 5000
+) 
+```
+
+```{r}
+marbles |> 
+ ungroup() |> 
+  mutate(
+    prob = map(marbles, ~sampling_df(.x, n = 10000))
+  ) |> 
+  unnest(prob) |> 
+  mutate(norm_probs = prop_match/sum(prop_match))->
+  marble_probs
+```
+
+```{r}
+#| label: fig-obs1
+#| fig-cap: "Probability of each composition of marbles"
+marble_probs |> 
+  ggplot(aes(blue_marbs, norm_probs))+
+    geom_col(fill = "steelblue4")+
+    labs(
+      title = "blue, white, blue",
+      x = "# of blue marbles",
+      y = "probability"
+    ) + 
+  ylim(0,1)->probs1
+probs1
+```
+
+## Updating probabilities
+
+What if we draw one more blue
+
+```{r}
+marble_probs |> 
+  mutate(new_obs_prob = blue_marbs / sum(blue_marbs),
+         posterior_prob = norm_probs * new_obs_prob,
+         posterior_norm = posterior_prob/sum(posterior_prob))->
+  marble_probs
+```
+
+```{r}
+#| label: fig-update
+#| fig-cap: "Bayesian update"
+#| fig-width: 10
+
+marble_probs |> 
+  ggplot(aes(blue_marbs, posterior_norm))+
+    geom_col(fill = "steelblue4")+
+    ylim(0,1)+
+      labs(
+      title = "probability update after blue",
+      x = "# of blue marbles",
+      y = "probability"
+    ) ->
+  probs2
+
+probs1 | probs2
+```

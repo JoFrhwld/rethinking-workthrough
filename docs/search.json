@@ -1,0 +1,58 @@
+[
+  {
+    "objectID": "posts/2023-05-09_01-golem-of-prague/index.html",
+    "href": "posts/2023-05-09_01-golem-of-prague/index.html",
+    "title": "01 Golem of Prague Chapter",
+    "section": "",
+    "text": "Listening"
+  },
+  {
+    "objectID": "posts/2023-05-09_01-golem-of-prague/index.html#hypotheses-models-statistics",
+    "href": "posts/2023-05-09_01-golem-of-prague/index.html#hypotheses-models-statistics",
+    "title": "01 Golem of Prague Chapter",
+    "section": "Hypotheses != Models != Statistics",
+    "text": "Hypotheses != Models != Statistics\n\n\n\n\nflowchart LR\n  H0(\"H0&lt;br&gt;Evolution is Neutral\") &lt;--&gt; P0A[\"Process&lt;br&gt;Neutral Equilibrium\"] \n  H0 &lt;--&gt; P0B[\"Process&lt;br&gt;Neutral Non-Equilibrium\"]\n  H1(\"H1&lt;br&gt;Selection Matters\") &lt;--&gt; P1A[\"Process&lt;br&gt;Constant Selection\"]\n  H1 &lt;--&gt; P1B[\"Process&lt;br&gt;Fluctuating Selection\"]\n  \n  P0A &lt;--&gt; MII([\"Model2&lt;br&gt;Power Law\"])\n  P1B &lt;--&gt; MII\n  P1A &lt;--&gt; MIII([\"Model3&lt;br&gt;'something different'\"])\n  P0B &lt;--&gt; MI([\"Model1&lt;br&gt;another thing\"])\n\n\n\n\n\nRejecting Model 1 does not result in a unique identification of a process, or even a hypothesis."
+  },
+  {
+    "objectID": "posts/2023-05-09_00-setup/index.html",
+    "href": "posts/2023-05-09_00-setup/index.html",
+    "title": "Setup",
+    "section": "",
+    "text": "I’ve set up the blog using the default quarto blog template in RStudio, also initializing a git repo and renv.\n\nrenv::install(c(\"tidyverse\", \"brms\"))\nrenv::install(c(\"coda\", \"mvtnorm\", \"dagitty\"))\n\nThe preface wants to install the book package with devtooks::install_github(), but I’m pretty sure that’s been superseded with remotes::install_github(), and renv::install().\n\ninstall.packages(\"cmdstanr\", repos = c(\"https://mc-stan.org/r-packages/\", getOption(\"repos\")))\nrenv::install(\"rmcelreath/rethinking\")"
+  },
+  {
+    "objectID": "posts/2023-05-09_02-small-large-worlds/index.html",
+    "href": "posts/2023-05-09_02-small-large-worlds/index.html",
+    "title": "02 Small Worlds and Large Worlds",
+    "section": "",
+    "text": "listening\nIn the analogy, models are “Small”, self-contained worlds."
+  },
+  {
+    "objectID": "posts/2023-05-09_02-small-large-worlds/index.html#garden-of-forking-paths.",
+    "href": "posts/2023-05-09_02-small-large-worlds/index.html#garden-of-forking-paths.",
+    "title": "02 Small Worlds and Large Worlds",
+    "section": "Garden of forking paths.",
+    "text": "Garden of forking paths.\nI was thinking of working out the probabilities by doing random sampling…\n\nlibrary(tidyverse)\nlibrary(gt)\nlibrary(patchwork)\nlibrary(here)\nsource(here(\"_defaults.R\"))\n\nGenerating the marble dataframe\n\ntibble(\n  blue_marbs = 0:4,\n  white_marbs = 4 - blue_marbs\n) |&gt; \n  rowwise() |&gt; \n  mutate(\n    marbles = list(c(rep(\"blue\", blue_marbs), rep(\"white\", white_marbs)))\n  ) -&gt; \n  marbles\n\n\nmarbles |&gt; \n  gt()\n\n\n\n\n\n\n  \n    \n    \n      blue_marbs\n      white_marbs\n      marbles\n    \n  \n  \n    0\n4\nwhite, white, white, white\n    1\n3\nblue, white, white, white\n    2\n2\nblue, blue, white, white\n    3\n1\nblue, blue, blue, white\n    4\n0\nblue, blue, blue, blue\n  \n  \n  \n\nTable 1:  The marble sampling distributions \n\n\n\nIn retrospect, I’m glad I did this, because I thought we were sampling without replacement.\nHere’s a function that will repeatedly sample from a set of marbles, and compare the result to a reference group.\n\nsampling_df &lt;- function(marbles, n = 1000, size = 3, pattern = c(\"blue\", \"white\", \"blue\")){\n1  sampling_tibble &lt;- tibble(samp = 1:n)\n  sampling_tibble |&gt; \n    mutate(\n2      chosen = map(samp, ~sample(marbles, size = 3, replace = T)),\n3      match = map_lgl(chosen, ~all(.x == pattern))\n    ) |&gt; \n4    summarise(prop_match = mean(match))-&gt;\n    sampling_tibble\n  return(sampling_tibble)\n}\n\n\n1\n\nI’ll capture everything within a tibble.\n\n2\n\nRowwise, sample from marbles with replacement.\n\n3\n\nReturn T or F if the sequence matches the pattern exactly.\n\n4\n\nThe mean() of the T, F column to get the proportion that match.\n\n\n\n\n\nsampling_df(\n  marbles = marbles$marbles[[4]],\n  n = 5000\n) \n\n# A tibble: 1 × 1\n  prop_match\n       &lt;dbl&gt;\n1      0.140\n\n\n\nmarbles |&gt; \n ungroup() |&gt; \n  mutate(\n    prob = map(marbles, ~sampling_df(.x, n = 10000))\n  ) |&gt; \n  unnest(prob) |&gt; \n  mutate(norm_probs = prop_match/sum(prop_match))-&gt;\n  marble_probs\n\n\nmarble_probs |&gt; \n  ggplot(aes(blue_marbs, norm_probs))+\n    geom_col(fill = \"steelblue4\")+\n    labs(\n      title = \"blue, white, blue\",\n      x = \"# of blue marbles\",\n      y = \"probability\"\n    ) + \n  ylim(0,1)-&gt;probs1\nprobs1\n\n\n\n\nFigure 1: Probability of each composition of marbles"
+  },
+  {
+    "objectID": "posts/2023-05-09_02-small-large-worlds/index.html#updating-probabilities",
+    "href": "posts/2023-05-09_02-small-large-worlds/index.html#updating-probabilities",
+    "title": "02 Small Worlds and Large Worlds",
+    "section": "Updating probabilities",
+    "text": "Updating probabilities\nWhat if we draw one more blue\n\nmarble_probs |&gt; \n  mutate(new_obs_prob = blue_marbs / sum(blue_marbs),\n         posterior_prob = norm_probs * new_obs_prob,\n         posterior_norm = posterior_prob/sum(posterior_prob))-&gt;\n  marble_probs\n\n\nmarble_probs |&gt; \n  ggplot(aes(blue_marbs, posterior_norm))+\n    geom_col(fill = \"steelblue4\")+\n    ylim(0,1)+\n      labs(\n      title = \"probability update after blue\",\n      x = \"# of blue marbles\",\n      y = \"probability\"\n    ) -&gt;\n  probs2\n\nprobs1 | probs2\n\n\n\n\nFigure 2: Bayesian update"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Statistical Rethinking Workthrough Blog",
+    "section": "",
+    "text": "01 Golem of Prague Chapter\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nSetup\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\n02 Small Worlds and Large Worlds\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "This is a blog to document my progress in working through Richard McElreath’s Statistical Rethinking: A Bayesian Course with Examples in R and Stan, which I’ll be supplementing with Solomon Kurz’ bookdown project, Statistical Rethinking with brms, ggplot2, and the tidyverse."
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "hash": "a34fa5211671d578879c3983f62ba2c4",
+  "result": {
+    "markdown": "---\ntitle: \"Setup\"\nauthor: \"Josef Fruehwald\"\ndate: 2023-05-09\n---\n\n\nI've set up the blog using the default quarto blog template in RStudio, also initializing a git repo and renv.\n\n\n::: {.cell}\n\n```{.r .cell-code}\nrenv::install(c(\"tidyverse\", \"brms\"))\nrenv::install(c(\"coda\", \"mvtnorm\", \"dagitty\"))\n```\n:::\n\n\nThe preface wants to install the book package with `devtooks::install_github()`, but I'm pretty sure that's been superseded with `remotes::install_github()`, and `renv::install()`.\n\n\n::: {.cell}\n\n```{.r .cell-code}\ninstall.packages(\"cmdstanr\", repos = c(\"https://mc-stan.org/r-packages/\", getOption(\"repos\")))\nrenv::install(\"rmcelreath/rethinking\")\n```\n:::\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

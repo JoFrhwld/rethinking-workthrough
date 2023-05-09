@@ -1,0 +1,5 @@
+---
+title: "About"
+---
+
+This is a blog to document my progress in working through Richard McElreath's *Statistical Rethinking: A Bayesian Course with Examples in R and Stan*, which I'll be supplementing with Solomon Kurz' bookdown project, *Statistical Rethinking with brms, ggplot2, and the tidyverse*.

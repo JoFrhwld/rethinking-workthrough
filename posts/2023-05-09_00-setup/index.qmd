@@ -1,0 +1,24 @@
+---
+title: "Setup"
+author: "Josef Fruehwald"
+date: 2023-05-09
+order: 0
+tags: 
+  - setup
+---
+
+I've set up the blog using the default quarto blog template in RStudio, also initializing a git repo and renv.
+
+```{r}
+#| eval: false
+renv::install(c("tidyverse", "brms"))
+renv::install(c("coda", "mvtnorm", "dagitty"))
+```
+
+The preface wants to install the book package with `devtooks::install_github()`, but I'm pretty sure that's been superseded with `remotes::install_github()`, and `renv::install()`.
+
+```{r}
+#| eval: false
+install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
+renv::install("rmcelreath/rethinking")
+```
