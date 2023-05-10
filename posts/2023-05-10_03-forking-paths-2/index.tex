@@ -1,0 +1,515 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\PassOptionsToPackage{dvipsnames,svgnames,x11names}{xcolor}
+%
+\documentclass[
+  letterpaper,
+  DIV=11,
+  numbers=noendperiod]{scrartcl}
+
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else  
+    % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+% Make \paragraph and \subparagraph free-standing
+\ifx\paragraph\undefined\else
+  \let\oldparagraph\paragraph
+  \renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+  \let\oldsubparagraph\subparagraph
+  \renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{241,243,245}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.40,0.45,0.13}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\BuiltInTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\ExtensionTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.28,0.35,0.67}{#1}}
+\newcommand{\ImportTok}[1]{\textcolor[rgb]{0.00,0.46,0.62}{#1}}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\NormalTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\RegionMarkerTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.07,0.07,0.07}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{longtable}
+\KOMAoption{captions}{tableheading}
+\makeatletter
+\@ifpackageloaded{tcolorbox}{}{\usepackage[skins,breakable]{tcolorbox}}
+\@ifpackageloaded{fontawesome5}{}{\usepackage{fontawesome5}}
+\definecolor{quarto-callout-color}{HTML}{909090}
+\definecolor{quarto-callout-note-color}{HTML}{0758E5}
+\definecolor{quarto-callout-important-color}{HTML}{CC1914}
+\definecolor{quarto-callout-warning-color}{HTML}{EB9113}
+\definecolor{quarto-callout-tip-color}{HTML}{00A047}
+\definecolor{quarto-callout-caution-color}{HTML}{FC5300}
+\definecolor{quarto-callout-color-frame}{HTML}{acacac}
+\definecolor{quarto-callout-note-color-frame}{HTML}{4582ec}
+\definecolor{quarto-callout-important-color-frame}{HTML}{d9534f}
+\definecolor{quarto-callout-warning-color-frame}{HTML}{f0ad4e}
+\definecolor{quarto-callout-tip-color-frame}{HTML}{02b875}
+\definecolor{quarto-callout-caution-color-frame}{HTML}{fd7e14}
+\makeatother
+\makeatletter
+\makeatother
+\makeatletter
+\makeatother
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\AtBeginDocument{%
+\ifdefined\contentsname
+  \renewcommand*\contentsname{Table of contents}
+\else
+  \newcommand\contentsname{Table of contents}
+\fi
+\ifdefined\listfigurename
+  \renewcommand*\listfigurename{List of Figures}
+\else
+  \newcommand\listfigurename{List of Figures}
+\fi
+\ifdefined\listtablename
+  \renewcommand*\listtablename{List of Tables}
+\else
+  \newcommand\listtablename{List of Tables}
+\fi
+\ifdefined\figurename
+  \renewcommand*\figurename{Figure}
+\else
+  \newcommand\figurename{Figure}
+\fi
+\ifdefined\tablename
+  \renewcommand*\tablename{Table}
+\else
+  \newcommand\tablename{Table}
+\fi
+}
+\@ifpackageloaded{float}{}{\usepackage{float}}
+\floatstyle{ruled}
+\@ifundefined{c@chapter}{\newfloat{codelisting}{h}{lop}}{\newfloat{codelisting}{h}{lop}[chapter]}
+\floatname{codelisting}{Listing}
+\newcommand*\listoflistings{\listof{codelisting}{List of Listings}}
+\makeatother
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\@ifpackageloaded{subcaption}{}{\usepackage{subcaption}}
+\makeatother
+\makeatletter
+\@ifpackageloaded{tcolorbox}{}{\usepackage[skins,breakable]{tcolorbox}}
+\makeatother
+\makeatletter
+\@ifundefined{shadecolor}{\definecolor{shadecolor}{rgb}{.97, .97, .97}}
+\makeatother
+\makeatletter
+\makeatother
+\makeatletter
+\makeatother
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same} % disable monospaced font for URLs
+\hypersetup{
+  pdftitle={Garden of Forking paths part 2},
+  pdfauthor={Josef Fruehwald},
+  colorlinks=true,
+  linkcolor={blue},
+  filecolor={Maroon},
+  citecolor={Blue},
+  urlcolor={Blue},
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Garden of Forking paths part 2}
+\author{Josef Fruehwald}
+\date{2023-05-10}
+
+\begin{document}
+\maketitle
+\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[interior hidden, boxrule=0pt, borderline west={3pt}{0pt}{shadecolor}, frame hidden, breakable, enhanced, sharp corners]}{\end{tcolorbox}}\fi
+
+\begin{tcolorbox}[enhanced jigsaw, breakable, opacityback=0, toprule=.15mm, colbacktitle=quarto-callout-note-color!10!white, colframe=quarto-callout-note-color-frame, rightrule=.15mm, colback=white, title=\textcolor{quarto-callout-note-color}{\faInfo}\hspace{0.5em}{Listening}, bottomrule=.15mm, coltitle=black, arc=.35mm, bottomtitle=1mm, toptitle=1mm, titlerule=0mm, leftrule=.75mm, left=2mm, opacitybacktitle=0.6]
+
+\end{tcolorbox}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(tidyverse)}
+\FunctionTok{library}\NormalTok{(gt)}
+\FunctionTok{library}\NormalTok{(patchwork)}
+\FunctionTok{library}\NormalTok{(here)}
+\FunctionTok{source}\NormalTok{(}\FunctionTok{here}\NormalTok{(}\StringTok{"\_defaults.R"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{a-nicer-table-version.}{%
+\subsection{A nicer table version.}\label{a-nicer-table-version.}}
+
+I'd like to re-represent the Bayesian Update in a nicer GT table. Some
+options are
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Plotting extensions from \texttt{\{gtExtras\}}
+\item
+  Emojis
+\end{enumerate}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{renv}\SpecialCharTok{::}\FunctionTok{install}\NormalTok{(}\StringTok{"gtExtras"}\NormalTok{)}
+\NormalTok{renv}\SpecialCharTok{::}\FunctionTok{install}\NormalTok{(}\StringTok{"svglite"}\NormalTok{)}
+\NormalTok{renv}\SpecialCharTok{::}\FunctionTok{install}\NormalTok{(}\StringTok{"emoji"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(gtExtras)}
+\FunctionTok{library}\NormalTok{(emoji)}
+\end{Highlighting}
+\end{Shaded}
+
+First, trying the ``win/losses'' column plot from \texttt{\{gtExtra\}}
+to illustrate the blue vs white marbles.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{tibble}\NormalTok{(}
+  \AttributeTok{blue\_marbs =} \DecValTok{0}\SpecialCharTok{:}\DecValTok{4}\NormalTok{,}
+  \AttributeTok{white\_marbs =} \DecValTok{4} \SpecialCharTok{{-}}\NormalTok{ blue\_marbs}
+\NormalTok{) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{rowwise}\NormalTok{() }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{mutate}\NormalTok{(}
+    \AttributeTok{marbles =} \FunctionTok{list}\NormalTok{(}\FunctionTok{c}\NormalTok{(}\FunctionTok{rep}\NormalTok{(}\DecValTok{1}\NormalTok{, blue\_marbs), }
+                     \FunctionTok{rep}\NormalTok{(}\DecValTok{0}\NormalTok{, white\_marbs)))}
+\NormalTok{  ) }\OtherTok{{-}\textgreater{}} 
+\NormalTok{  marbles\_wl}
+\end{Highlighting}
+\end{Shaded}
+
+The cell background will have to be off-white for the white ticks to
+show
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{marbles\_wl }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{gt}\NormalTok{() }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{gt\_plt\_winloss}\NormalTok{(marbles, }\AttributeTok{palette =} \FunctionTok{c}\NormalTok{(}\StringTok{"blue"}\NormalTok{, }\StringTok{"white"}\NormalTok{, }\StringTok{"grey"}\NormalTok{)) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{tab\_style}\NormalTok{(}\AttributeTok{style =} \FunctionTok{cell\_fill}\NormalTok{(}\AttributeTok{color =} \StringTok{"antiquewhite"}\NormalTok{), }
+            \AttributeTok{locations =} \FunctionTok{cells\_body}\NormalTok{())}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{tbl-marble-wl}{}
+\begin{longtable}{rrc}
+\caption{\label{tbl-marble-wl}Representing marble compositions with `win-loss' plots }\tabularnewline
+
+\toprule
+blue\_marbs & white\_marbs & marbles \\ 
+\midrule
+0 & 4 & <?xml version='1.0' encoding='UTF-8' ?><svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' class='svglite' width='58.06pt' height='10.80pt' viewBox='0 0 58.06 10.80'><defs>  <style type='text/css'><![CDATA[    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite rect, .svglite circle {      fill: none;      stroke: #000000;      stroke-linecap: round;      stroke-linejoin: round;      stroke-miterlimit: 10.00;    }    .svglite text {      white-space: pre;    }  ]]></style></defs><rect width='100%' height='100%' style='stroke: none; fill: none;'/><defs>  <clipPath id='cpMC4wMHw1OC4wNnwwLjAwfDEwLjgw'>    <rect x='0.00' y='0.00' width='58.06' height='10.80' />  </clipPath></defs><g clip-path='url(#cpMC4wMHw1OC4wNnwwLjAwfDEwLjgw)'><line x1='4.19' y1='8.91' x2='4.19' y2='4.70' style='stroke-width: 2.13; stroke: #FFFFFF;' /><line x1='7.30' y1='8.91' x2='7.30' y2='4.70' style='stroke-width: 2.13; stroke: #FFFFFF;' /><line x1='10.40' y1='8.91' x2='10.40' y2='4.70' style='stroke-width: 2.13; stroke: #FFFFFF;' /><line x1='13.51' y1='8.91' x2='13.51' y2='4.70' style='stroke-width: 2.13; stroke: #FFFFFF;' /></g></svg> \\ 
+1 & 3 & <?xml version='1.0' encoding='UTF-8' ?><svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' class='svglite' width='58.06pt' height='10.80pt' viewBox='0 0 58.06 10.80'><defs>  <style type='text/css'><![CDATA[    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite rect, .svglite circle {      fill: none;      stroke: #000000;      stroke-linecap: round;      stroke-linejoin: round;      stroke-miterlimit: 10.00;    }    .svglite text {      white-space: pre;    }  ]]></style></defs><rect width='100%' height='100%' style='stroke: none; fill: none;'/><defs>  <clipPath id='cpMC4wMHw1OC4wNnwwLjAwfDEwLjgw'>    <rect x='0.00' y='0.00' width='58.06' height='10.80' />  </clipPath></defs><g clip-path='url(#cpMC4wMHw1OC4wNnwwLjAwfDEwLjgw)'><line x1='4.19' y1='1.89' x2='4.19' y2='6.10' style='stroke-width: 2.13; stroke: #0000FF;' /><line x1='7.30' y1='8.91' x2='7.30' y2='4.70' style='stroke-width: 2.13; stroke: #FFFFFF;' /><line x1='10.40' y1='8.91' x2='10.40' y2='4.70' style='stroke-width: 2.13; stroke: #FFFFFF;' /><line x1='13.51' y1='8.91' x2='13.51' y2='4.70' style='stroke-width: 2.13; stroke: #FFFFFF;' /></g></svg> \\ 
+2 & 2 & <?xml version='1.0' encoding='UTF-8' ?><svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' class='svglite' width='58.06pt' height='10.80pt' viewBox='0 0 58.06 10.80'><defs>  <style type='text/css'><![CDATA[    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite rect, .svglite circle {      fill: none;      stroke: #000000;      stroke-linecap: round;      stroke-linejoin: round;      stroke-miterlimit: 10.00;    }    .svglite text {      white-space: pre;    }  ]]></style></defs><rect width='100%' height='100%' style='stroke: none; fill: none;'/><defs>  <clipPath id='cpMC4wMHw1OC4wNnwwLjAwfDEwLjgw'>    <rect x='0.00' y='0.00' width='58.06' height='10.80' />  </clipPath></defs><g clip-path='url(#cpMC4wMHw1OC4wNnwwLjAwfDEwLjgw)'><line x1='4.19' y1='1.89' x2='4.19' y2='6.10' style='stroke-width: 2.13; stroke: #0000FF;' /><line x1='7.30' y1='1.89' x2='7.30' y2='6.10' style='stroke-width: 2.13; stroke: #0000FF;' /><line x1='10.40' y1='8.91' x2='10.40' y2='4.70' style='stroke-width: 2.13; stroke: #FFFFFF;' /><line x1='13.51' y1='8.91' x2='13.51' y2='4.70' style='stroke-width: 2.13; stroke: #FFFFFF;' /></g></svg> \\ 
+3 & 1 & <?xml version='1.0' encoding='UTF-8' ?><svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' class='svglite' width='58.06pt' height='10.80pt' viewBox='0 0 58.06 10.80'><defs>  <style type='text/css'><![CDATA[    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite rect, .svglite circle {      fill: none;      stroke: #000000;      stroke-linecap: round;      stroke-linejoin: round;      stroke-miterlimit: 10.00;    }    .svglite text {      white-space: pre;    }  ]]></style></defs><rect width='100%' height='100%' style='stroke: none; fill: none;'/><defs>  <clipPath id='cpMC4wMHw1OC4wNnwwLjAwfDEwLjgw'>    <rect x='0.00' y='0.00' width='58.06' height='10.80' />  </clipPath></defs><g clip-path='url(#cpMC4wMHw1OC4wNnwwLjAwfDEwLjgw)'><line x1='4.19' y1='1.89' x2='4.19' y2='6.10' style='stroke-width: 2.13; stroke: #0000FF;' /><line x1='7.30' y1='1.89' x2='7.30' y2='6.10' style='stroke-width: 2.13; stroke: #0000FF;' /><line x1='10.40' y1='1.89' x2='10.40' y2='6.10' style='stroke-width: 2.13; stroke: #0000FF;' /><line x1='13.51' y1='8.91' x2='13.51' y2='4.70' style='stroke-width: 2.13; stroke: #FFFFFF;' /></g></svg> \\ 
+4 & 0 & <?xml version='1.0' encoding='UTF-8' ?><svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' class='svglite' width='58.06pt' height='10.80pt' viewBox='0 0 58.06 10.80'><defs>  <style type='text/css'><![CDATA[    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite rect, .svglite circle {      fill: none;      stroke: #000000;      stroke-linecap: round;      stroke-linejoin: round;      stroke-miterlimit: 10.00;    }    .svglite text {      white-space: pre;    }  ]]></style></defs><rect width='100%' height='100%' style='stroke: none; fill: none;'/><defs>  <clipPath id='cpMC4wMHw1OC4wNnwwLjAwfDEwLjgw'>    <rect x='0.00' y='0.00' width='58.06' height='10.80' />  </clipPath></defs><g clip-path='url(#cpMC4wMHw1OC4wNnwwLjAwfDEwLjgw)'><line x1='4.19' y1='1.89' x2='4.19' y2='6.10' style='stroke-width: 2.13; stroke: #0000FF;' /><line x1='7.30' y1='1.89' x2='7.30' y2='6.10' style='stroke-width: 2.13; stroke: #0000FF;' /><line x1='10.40' y1='1.89' x2='10.40' y2='6.10' style='stroke-width: 2.13; stroke: #0000FF;' /><line x1='13.51' y1='1.89' x2='13.51' y2='6.10' style='stroke-width: 2.13; stroke: #0000FF;' /></g></svg> \\ 
+\bottomrule
+\end{longtable}
+
+I'm not overwhelmed by the result. I'll try emojis instead.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# Getting the blue circle emoji}
+\NormalTok{blue\_marb }\OtherTok{\textless{}{-}}\NormalTok{ emojis }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{filter}\NormalTok{(}\FunctionTok{str\_detect}\NormalTok{(name, }\StringTok{"blue"}\NormalTok{), }
+         \FunctionTok{str\_detect}\NormalTok{(name, }\StringTok{"circle"}\NormalTok{)) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{pull}\NormalTok{(emoji)}
+
+\NormalTok{blue\_marb}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+[1] "🔵"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# Getting the white circle emoji}
+\NormalTok{white\_marb }\OtherTok{\textless{}{-}}\NormalTok{ emojis }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{filter}\NormalTok{(}\FunctionTok{str\_detect}\NormalTok{(name, }\StringTok{"white"}\NormalTok{), }
+         \FunctionTok{str\_detect}\NormalTok{(name, }\StringTok{"circle"}\NormalTok{)) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{pull}\NormalTok{(emoji)}
+
+\NormalTok{white\_marb}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+[1] "⚪"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{tibble}\NormalTok{(}
+  \AttributeTok{blue\_marbs =} \DecValTok{0}\SpecialCharTok{:}\DecValTok{4}\NormalTok{,}
+  \AttributeTok{white\_marbs =} \DecValTok{4} \SpecialCharTok{{-}}\NormalTok{ blue\_marbs}
+\NormalTok{) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{rowwise}\NormalTok{() }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{mutate}\NormalTok{(}
+    \AttributeTok{marbles =} \FunctionTok{list}\NormalTok{(}\FunctionTok{c}\NormalTok{(}\FunctionTok{rep}\NormalTok{(blue\_marb, blue\_marbs), }
+                     \FunctionTok{rep}\NormalTok{(white\_marb, white\_marbs)))}
+\NormalTok{  ) }\OtherTok{{-}\textgreater{}} 
+\NormalTok{  marbles\_emoji}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{marbles\_emoji }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{gt}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{tbl-marbles-emoji}{}
+\begin{longtable}{rrc}
+\caption{\label{tbl-marbles-emoji}Representing marble compositions with emoji }\tabularnewline
+
+\toprule
+blue\_marbs & white\_marbs & marbles \\ 
+\midrule
+0 & 4 & ⚪, ⚪, ⚪, ⚪ \\ 
+1 & 3 & 🔵, ⚪, ⚪, ⚪ \\ 
+2 & 2 & 🔵, 🔵, ⚪, ⚪ \\ 
+3 & 1 & 🔵, 🔵, 🔵, ⚪ \\ 
+4 & 0 & 🔵, 🔵, 🔵, 🔵 \\ 
+\bottomrule
+\end{longtable}
+
+Yes, this is it.
+
+\hypertarget{rerunning-the-sampling}{%
+\subsubsection{Rerunning the sampling}\label{rerunning-the-sampling}}
+
+I'll re-run the sampling from
+\href{../2023-05-09_02-small-large-worlds/index.qmd}{the previous post}.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{sampling\_df }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(marbles, }
+                        \AttributeTok{n =} \DecValTok{1000}\NormalTok{, }
+                        \AttributeTok{size =} \DecValTok{3}\NormalTok{, }
+                        \AttributeTok{pattern =} \FunctionTok{c}\NormalTok{(blue\_marb, white\_marb, blue\_marb))\{}
+\NormalTok{  sampling\_tibble }\OtherTok{\textless{}{-}} \FunctionTok{tibble}\NormalTok{(}\AttributeTok{samp =} \DecValTok{1}\SpecialCharTok{:}\NormalTok{n)   }
+\NormalTok{  sampling\_tibble }\SpecialCharTok{|\textgreater{}} 
+    \FunctionTok{mutate}\NormalTok{(}
+      \AttributeTok{chosen =} \FunctionTok{map}\NormalTok{(samp, }
+                   \SpecialCharTok{\textasciitilde{}}\FunctionTok{sample}\NormalTok{(marbles, }
+                           \AttributeTok{size =} \DecValTok{3}\NormalTok{, }
+                           \AttributeTok{replace =}\NormalTok{ T)),}
+      \AttributeTok{match =} \FunctionTok{map\_lgl}\NormalTok{(chosen, }
+                      \SpecialCharTok{\textasciitilde{}}\FunctionTok{all}\NormalTok{(.x }\SpecialCharTok{==}\NormalTok{ pattern))                 }
+\NormalTok{    ) }\SpecialCharTok{|\textgreater{}} 
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{prop\_match =} \FunctionTok{mean}\NormalTok{(match))}\OtherTok{{-}\textgreater{}}                         
+\NormalTok{    sampling\_tibble}
+  \FunctionTok{return}\NormalTok{(sampling\_tibble)}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{marbles\_emoji }\SpecialCharTok{|\textgreater{}} 
+ \FunctionTok{ungroup}\NormalTok{() }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{mutate}\NormalTok{(}
+    \AttributeTok{prob =} \FunctionTok{map}\NormalTok{(marbles, }\SpecialCharTok{\textasciitilde{}}\FunctionTok{sampling\_df}\NormalTok{(.x, }\AttributeTok{n =} \DecValTok{10000}\NormalTok{))}
+\NormalTok{  ) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{unnest}\NormalTok{(prob) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{norm\_probs =}\NormalTok{ prop\_match}\SpecialCharTok{/}\FunctionTok{sum}\NormalTok{(prop\_match))}\OtherTok{{-}\textgreater{}}
+\NormalTok{  marble\_probs}
+\end{Highlighting}
+\end{Shaded}
+
+I want to label the column of probabilities with the key sequence.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{key\_seq }\OtherTok{\textless{}{-}} \FunctionTok{str\_glue}\NormalTok{(}\StringTok{"\{blue\_marb\}, \{white\_marb\}, \{blue\_marb\}"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\texttt{gtExtras::gt\_plt\_bar\_pct()} will plot a bar chart within the
+table.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{marble\_probs }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{select}\NormalTok{(marbles, norm\_probs) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{norm\_probs =}\NormalTok{ norm\_probs }\SpecialCharTok{*} \DecValTok{100}\NormalTok{) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{gt}\NormalTok{() }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{cols\_label}\NormalTok{(}
+    \AttributeTok{norm\_probs =} \FunctionTok{str\_glue}\NormalTok{(}\StringTok{"p(marbles | \{key\_seq\})"}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{gt\_plt\_bar\_pct}\NormalTok{(norm\_probs, }
+                 \AttributeTok{scaled =}\NormalTok{ T, }
+                 \AttributeTok{fill =} \StringTok{"steelblue"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{tbl-upate1}{}
+\begin{longtable}{cl}
+\caption{\label{tbl-upate1}Probability of each marble composition given (🔵, ⚪️, 🔵) samples with
+replacement. }\tabularnewline
+
+\toprule
+marbles & p(marbles | 🔵, ⚪, 🔵) \\ 
+\midrule
+⚪, ⚪, ⚪, ⚪ & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:0%;height:16px;'></div></div> \\ 
+🔵, ⚪, ⚪, ⚪ & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:14.9532710280374%;height:16px;'></div></div> \\ 
+🔵, 🔵, ⚪, ⚪ & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:39.8968739929101%;height:16px;'></div></div> \\ 
+🔵, 🔵, 🔵, ⚪ & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:45.1498549790525%;height:16px;'></div></div> \\ 
+🔵, 🔵, 🔵, 🔵 & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:0%;height:16px;'></div></div> \\ 
+\bottomrule
+\end{longtable}
+
+There we go!
+
+\hypertarget{with-the-bayesian-update}{%
+\subsubsection{With the Bayesian
+Update}\label{with-the-bayesian-update}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{marble\_probs }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{new\_prob =}\NormalTok{ blue\_marbs}\SpecialCharTok{/}\FunctionTok{sum}\NormalTok{(blue\_marbs),}
+         \AttributeTok{multiplied =}\NormalTok{ norm\_probs }\SpecialCharTok{*}\NormalTok{ new\_prob,}
+         \AttributeTok{norm\_new =}\NormalTok{ multiplied}\SpecialCharTok{/}\FunctionTok{sum}\NormalTok{(multiplied)) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{select}\NormalTok{(marbles, norm\_probs, norm\_new) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{norm\_probs =}\NormalTok{ norm\_probs }\SpecialCharTok{*} \DecValTok{100}\NormalTok{,}
+         \AttributeTok{norm\_new =}\NormalTok{ norm\_new }\SpecialCharTok{*} \DecValTok{100}\NormalTok{) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{gt}\NormalTok{() }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{cols\_label}\NormalTok{(}
+    \AttributeTok{norm\_probs =} \FunctionTok{str\_glue}\NormalTok{(}\StringTok{"p(marbles | \{key\_seq\})"}\NormalTok{),}
+    \AttributeTok{norm\_new =} \FunctionTok{str\_glue}\NormalTok{(}\StringTok{"after \{blue\_marb\}"}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{gt\_plt\_bar\_pct}\NormalTok{(norm\_probs, }
+                 \AttributeTok{scaled =}\NormalTok{ T, }
+                 \AttributeTok{fill =} \StringTok{"steelblue"}\NormalTok{) }\SpecialCharTok{|\textgreater{}} 
+  \FunctionTok{gt\_plt\_bar\_pct}\NormalTok{(norm\_new, }
+                 \AttributeTok{scaled =}\NormalTok{ T, }
+                 \AttributeTok{fill =} \StringTok{"steelblue"}\NormalTok{) }\SpecialCharTok{|\textgreater{}} 
+  \DocumentationTok{\#\# Necessary to get the percent bars}
+  \DocumentationTok{\#\# to be equal length.}
+  \FunctionTok{cols\_width}\NormalTok{(}\DecValTok{2} \SpecialCharTok{\textasciitilde{}} \FunctionTok{px}\NormalTok{(}\DecValTok{200}\NormalTok{),}
+             \DecValTok{3} \SpecialCharTok{\textasciitilde{}} \FunctionTok{px}\NormalTok{(}\DecValTok{200}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{tbl-upate2}{}
+\begin{longtable}{cll}
+\caption{\label{tbl-upate2}Probability of each marble composition given an additional (🔵) sample }\tabularnewline
+
+\toprule
+marbles & p(marbles | 🔵, ⚪, 🔵) & after 🔵 \\ 
+\midrule
+⚪, ⚪, ⚪, ⚪ & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:0%;height:16px;'></div></div> & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:0%;height:16px;'></div></div> \\ 
+🔵, ⚪, ⚪, ⚪ & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:14.9532710280374%;height:16px;'></div></div> & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:6.49587008259835%;height:16px;'></div></div> \\ 
+🔵, 🔵, ⚪, ⚪ & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:39.8968739929101%;height:16px;'></div></div> & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:34.6633067338653%;height:16px;'></div></div> \\ 
+🔵, 🔵, 🔵, ⚪ & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:45.1498549790525%;height:16px;'></div></div> & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:58.8408231835363%;height:16px;'></div></div> \\ 
+🔵, 🔵, 🔵, 🔵 & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:0%;height:16px;'></div></div> & <div style='flex-grow:1;margin-left:8px;background:#e1e1e1;'><div style='background:steelblue;width:0%;height:16px;'></div></div> \\ 
+\bottomrule
+\end{longtable}
+
+
+
+\end{document}

@@ -1,0 +1,425 @@
+---
+title: "Garden of Forking paths part 2"
+order: 04
+date: 2023-05-10
+---
+
+::: callout-note
+## Listening
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/6aIJ5Tc5BtiPSQc6Ago1Y6?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+
+</iframe>
+:::
+
+```{r}
+#| eval: false
+renv::install("khroma")
+
+```
+
+```{r}
+library(tidyverse)
+library(khroma)
+library(gt)
+library(patchwork)
+library(here)
+source(here("_defaults.R"))
+```
+
+## A nicer table version.
+
+I'd like to re-represent the Bayesian Update in a nicer GT table. Some options are
+
+1.  Plotting extensions from `{gtExtras}`
+2.  Emojis
+
+```{r}
+#| eval: false
+renv::install("gtExtras")
+renv::install("svglite")
+renv::install("emoji")
+```
+
+```{r}
+library(gtExtras)
+library(emoji)
+```
+
+First, trying the "win/losses" column plot from `{gtExtra}` to illustrate the blue vs white marbles.
+
+```{r}
+tibble(
+  blue_marbs = 0:4,
+  white_marbs = 4 - blue_marbs
+) |> 
+  rowwise() |> 
+  mutate(
+    marbles = list(c(rep(1, blue_marbs), 
+                     rep(0, white_marbs)))
+  ) -> 
+  marbles_wl
+```
+
+The cell background will have to be off-white for the white ticks to show
+
+```{r}
+#| label: tbl-marble-wl
+#| tbl-cap: "Representing marble compositions with 'win-loss' plots"
+marbles_wl |> 
+  gt() |> 
+  gt_plt_winloss(marbles, palette = c("blue", "white", "grey")) |> 
+  tab_style(style = cell_fill(color = "antiquewhite"), 
+            locations = cells_body())
+```
+
+I'm not overwhelmed by the result. I'll try emojis instead.
+
+```{r}
+## Getting the blue circle emoji
+blue_marb <- emojis |> 
+  filter(str_detect(name, "blue"), 
+         str_detect(name, "circle")) |> 
+  pull(emoji)
+
+blue_marb
+```
+
+```{r}
+## Getting the white circle emoji
+white_marb <- emojis |> 
+  filter(str_detect(name, "white"), 
+         str_detect(name, "circle")) |> 
+  pull(emoji)
+
+white_marb
+```
+
+```{r}
+tibble(
+  blue_marbs = 0:4,
+  white_marbs = 4 - blue_marbs
+) |> 
+  rowwise() |> 
+  mutate(
+    marbles = list(c(rep(blue_marb, blue_marbs), 
+                     rep(white_marb, white_marbs)))
+  ) -> 
+  marbles_emoji
+```
+
+```{r}
+#| label: tbl-marbles-emoji
+#| tbl-cap: "Representing marble compositions with emoji"
+marbles_emoji |> 
+  gt()
+```
+
+Yes, this is it.
+
+### Rerunning the sampling
+
+I'll re-run the sampling from [the previous post](../2023-05-09_02-small-large-worlds/index.qmd).
+
+```{r}
+sampling_df <- function(marbles, 
+                        n = 1000, 
+                        size = 3, 
+                        pattern = c(blue_marb, white_marb, blue_marb)){
+  sampling_tibble <- tibble(samp = 1:n)   
+  sampling_tibble |> 
+    mutate(
+      chosen = map(samp, 
+                   ~sample(marbles, 
+                           size = 3, 
+                           replace = T)),
+      match = map_lgl(chosen, 
+                      ~all(.x == pattern))                 
+    ) |> 
+    summarise(prop_match = mean(match))->                         
+    sampling_tibble
+  return(sampling_tibble)
+}
+```
+
+```{r}
+marbles_emoji |> 
+ ungroup() |> 
+  mutate(
+    prob = map(marbles, ~sampling_df(.x, n = 10000))
+  ) |> 
+  unnest(prob) |> 
+  mutate(norm_probs = prop_match/sum(prop_match))->
+  marble_probs
+```
+
+I want to label the column of probabilities with the key sequence.
+
+```{r}
+key_seq <- str_glue("{blue_marb}, {white_marb}, {blue_marb}")
+```
+
+`gtExtras::gt_plt_bar_pct()` will plot a bar chart within the table.
+
+```{r}
+#| label: tbl-upate1
+#| tbl-cap: "Probability of each marble composition given (🔵, ⚪️, 🔵) samples with replacement."
+marble_probs |> 
+  select(marbles, norm_probs) |> 
+  mutate(norm_probs = norm_probs * 100) |> 
+  gt() |> 
+  cols_label(
+    norm_probs = str_glue("p(marbles | {key_seq})")
+  ) |> 
+  gt_plt_bar_pct(norm_probs, 
+                 scaled = T, 
+                 fill = "steelblue")
+```
+
+There we go!
+
+### With the Bayesian Update
+
+```{r}
+#| label: tbl-upate2
+#| tbl-cap: "Probability of each marble composition given an additional (🔵) sample"
+marble_probs |> 
+  mutate(new_prob = blue_marbs/sum(blue_marbs),
+         multiplied = norm_probs * new_prob,
+         norm_new = multiplied/sum(multiplied)) |> 
+  select(marbles, norm_probs, norm_new) |> 
+  mutate(norm_probs = norm_probs * 100,
+         norm_new = norm_new * 100) |> 
+  gt() |> 
+  cols_label(
+    norm_probs = str_glue("p(marbles | {key_seq})"),
+    norm_new = str_glue("after {blue_marb}")
+  ) |> 
+  gt_plt_bar_pct(norm_probs, 
+                 scaled = T, 
+                 fill = "steelblue") |> 
+  gt_plt_bar_pct(norm_new, 
+                 scaled = T, 
+                 fill = "steelblue") |> 
+  ## Necessary to get the percent bars
+  ## to be equal length.
+  cols_width(2 ~ px(200),
+             3 ~ px(200))
+```
+
+## Bayesian Updating
+
+I'll try to illustrate Baysian updating with an animated plotly plot.
+
+```{r}
+#| eval: false
+renv::install("plotly")
+renv::install("slider")
+```
+
+```{r}
+library(plotly)
+library(slider)
+```
+
+I know enough to know that the distribution ~~that's being updated is the beta~~. (Apparently is the binomial. Still a but lost on their distinction!) So I'll get the density for each update.
+
+```{r}
+plot(
+  seq(0,1, length =100),
+  dbeta(seq(0,1, length =100), 1, 1),
+  type = 'l'
+)
+```
+
+```{r}
+water_land_sequence <- c("W", "L", "W", "W", "L", "W", "L", "W")
+```
+
+I'll use `slider::slide()` to generate a data frame of sample updates. I'll need a function that takes a sequence of `W` and `L` and converts them into counts.
+
+```{r}
+w_l_count <- function(x){
+  tibble(
+    water = sum(x == "W"),
+    land = sum(x == "L")
+  )
+}
+```
+
+```{r}
+slide(water_land_sequence, 
+      .f = w_l_count, 
+      .before = Inf,
+      .after = 0) |> 
+  bind_rows() |> 
+  mutate(seq = row_number()) |> 
+  bind_rows(
+    tibble(
+      water = 0,
+      land = 0, 
+      seq = 0
+    )
+  ) |> 
+  arrange(seq) ->
+  sequence_counts
+```
+
+```{r}
+#| label: tbl-wlcount
+#| tbl-cap: "Table of water, land count updates"
+sequence_counts |> 
+  gt()
+```
+
+Now to get the densities.
+
+```{r}
+sequence_counts |> 
+  rowwise() |> 
+  mutate(
+    density = map2(
+      water, land, ~tibble(prop = seq(0.0001, 0.9999, length = 100),
+                           density_unstd = dbinom(water, size = water + land, prob = prop),
+                           density = density_unstd/sum(density_unstd)
+                           )
+    )
+  ) |> 
+  unnest(density)->
+  density_updates
+```
+
+```{r}
+#| label: fig-beta-updates
+#| fig-cap: "beta distribution updates"
+density_updates |> 
+  ggplot(aes(prop, density))+
+    geom_line(aes(group = seq, color = seq))
+```
+
+Good first step.
+
+I had to turn to the plotly book to get the animated lines correct <https://plotly-r.com/animating-views.html>.
+
+```{r}
+sequence_counts |> 
+  mutate(
+    annotation = str_glue("W:{water}, L:{land}")
+  ) -> 
+  wl_annotate
+```
+
+```{r}
+#| label: fig-anim
+#| fig-cap: "Animated Bayesian Updating"
+density_updates |> 
+  plot_ly() |> 
+  add_lines(
+    x = ~prop,
+    y = ~density,
+    frame = ~seq,
+    line = list(simplify = F, width = 3)
+  ) |> 
+  add_text(
+    data = wl_annotate,
+    text = ~annotation,
+    frame = ~seq,
+    x = 0.1,
+    y = 0.025,
+    textfont = list(size = 20)
+  ) |>
+  layout(
+    showlegend = F
+  )
+```
+
+## On priors
+
+> The fact that statistical inference uses mathematics does not imply that there is only one reasonable or useful way to conduct an analysis.
+
+## Grid approximation
+
+Ok, I'll do one grid approximation for the hell of it.
+
+...
+
+God distracted and went down a rabbit hole on the beta vs binomial distributions.
+
+```{r}
+#| label: fig-beta-vs-binom
+#| fig-cap: "Comparing normalized densities for beta(6,3) and binom(6, 9, p)"
+tibble(
+  prob = seq(0.0001, 0.9999, length = 50), 
+  prior_unstd = case_when(
+    prob < 0.5 ~ 0,
+    .default = 1
+  ),
+  prior_std = prior_unstd/sum(prior_unstd),
+  likelihood_binom = dbinom(6, size = 9, prob = prob),
+  l_binom_std = likelihood_binom/sum(likelihood_binom),
+  likelihood_beta = dbeta(prob, 6, 9-6),
+  l_beta_std = likelihood_beta/sum(likelihood_beta)
+) |> 
+  ggplot(aes(prob))+
+    geom_point(aes(y = l_binom_std, color = "binom"))+
+    geom_point(aes(y = l_beta_std, color = "beta"))+
+    scale_color_bright()+
+    labs(
+      x = "probability",
+      color = "distribution",
+      y = NULL
+    )
+```
+
+Glad I did this. I guess
+
+-   `dbinom` $\propto P(O, S | p)$
+
+-   `dbeta` $\propto P(p|O,S)$
+
+I guess I'd want to see dbinom plotted out with O on the x axis?
+
+```{r}
+#| label: fig-binoms
+#| fig-cap: "Binomial distributions of various successes out of 9 trials, for various p"
+tibble(
+  probability = seq(0.0001, 0.9999, length = 10)
+) |> 
+  rowwise() |> 
+  mutate(
+    densities = map(
+      probability,
+      ~tibble(obs = 0:9, 
+              density = dbinom(obs, size = 9, prob = .x))
+    )
+  ) |> 
+  unnest(densities) ->
+  binomial_densities 
+
+binomial_densities |> 
+  ggplot(aes(obs, density, color = probability))+
+    geom_point()+
+    geom_line(aes(group = probability)) +
+    geom_rect(
+      color = "red",
+      fill = NA,
+      xmin = 5.5,
+      xmax = 6.5,
+      ymin = 0,
+      ymax = 1
+    )+
+    scale_color_batlow()
+```
+
+What we're plotting out is what's in the red box, flipped on its side.
+
+```{r}
+#| label: fig-binom-side
+#| fig-cap: "Normalized binomial density for 6 successes out of 9 trials for various p."
+binomial_densities |> 
+  filter(obs == 6) |> 
+  ggplot(aes(probability, density))+
+    geom_line()+
+    geom_point(aes(color = probability))+
+    scale_color_batlow()
+```
