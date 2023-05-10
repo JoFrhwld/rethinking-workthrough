@@ -423,3 +423,35 @@ binomial_densities |>
     geom_point(aes(color = probability))+
     scale_color_batlow()
 ```
+
+## Update!
+
+
+Thanks TJ! 
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">i forgot how i know this but they are the same if you plug in <br><br>likelihood_beta = dbeta(prob, 1 + 6, 1 + 9-6),</p>&mdash; tj mahr 🍍🍕 (@tjmahr) <a href="https://twitter.com/tjmahr/status/1656396567601971203?ref_src=twsrc%5Etfw">May 10, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+```{r}
+#| label: fig-beta-vs-binom2
+#| fig-cap: "Comparing normalized densities for beta(6+1,3+1) and binom(6, 9, p)"
+tibble(
+  prob = seq(0.0001, 0.9999, length = 50), 
+  prior_unstd = case_when(
+    prob < 0.5 ~ 0,
+    .default = 1
+  ),
+  prior_std = prior_unstd/sum(prior_unstd),
+  likelihood_binom = dbinom(6, size = 9, prob = prob),
+  l_binom_std = likelihood_binom/sum(likelihood_binom),
+  likelihood_beta = dbeta(prob, (6+1), (9-6)+1),
+  l_beta_std = likelihood_beta/sum(likelihood_beta)
+) |> 
+  ggplot(aes(prob))+
+    geom_point(aes(y = l_binom_std, color = "binom"))+
+    geom_point(aes(y = l_beta_std, color = "beta"))+
+    scale_color_bright()+
+    labs(
+      x = "probability",
+      color = "distribution",
+      y = NULL
+    )
+```
