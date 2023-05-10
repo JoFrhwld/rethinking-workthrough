@@ -447,12 +447,13 @@ tibble(
   l_beta_std = likelihood_beta/sum(likelihood_beta)
 ) |> 
   ggplot(aes(prob))+
-    geom_point(aes(y = l_binom_std, color = "binom"))+
-    geom_point(aes(y = l_beta_std, color = "beta"))+
+    geom_point(aes(y = l_binom_std, color = "binom", size = "binom"))+
+    geom_point(aes(y = l_beta_std, color = "beta",size = "beta"))+
     scale_color_bright()+
     labs(
       x = "probability",
       color = "distribution",
+      size = "distribution",
       y = NULL
     )
 ```
