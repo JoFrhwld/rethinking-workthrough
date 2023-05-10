@@ -343,7 +343,7 @@ Ok, I'll do one grid approximation for the hell of it.
 
 ...
 
-God distracted and went down a rabbit hole on the beta vs binomial distributions.
+Got distracted and went down a rabbit hole on the beta vs binomial distributions.
 
 ```{r}
 #| label: fig-beta-vs-binom
@@ -428,6 +428,7 @@ binomial_densities |>
 
 
 Thanks TJ! 
+
 <blockquote class="twitter-tweet"><p lang="en" dir="ltr">i forgot how i know this but they are the same if you plug in <br><br>likelihood_beta = dbeta(prob, 1 + 6, 1 + 9-6),</p>&mdash; tj mahr 🍍🍕 (@tjmahr) <a href="https://twitter.com/tjmahr/status/1656396567601971203?ref_src=twsrc%5Etfw">May 10, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
 ```{r}
