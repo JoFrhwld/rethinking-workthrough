@@ -2,6 +2,8 @@
 title: "Garden of Forking paths part 2"
 order: 04
 date: 2023-05-10
+date-modified: 2023-05-12
+prefer-html: true
 ---
 
 ::: callout-note
@@ -63,6 +65,7 @@ tibble(
 
 The cell background will have to be off-white for the white ticks to show
 
+::: {.content-visible when-format="html"}
 ```{r}
 #| label: tbl-marble-wl
 #| tbl-cap: "Representing marble compositions with 'win-loss' plots"
@@ -72,11 +75,11 @@ marbles_wl |>
   tab_style(style = cell_fill(color = "antiquewhite"), 
             locations = cells_body())
 ```
+:::
 
 I'm not overwhelmed by the result. I'll try emojis instead.
 
 ```{r}
-## Getting the blue circle emoji
 blue_marb <- emojis |> 
   filter(str_detect(name, "blue"), 
          str_detect(name, "circle")) |> 
@@ -86,7 +89,6 @@ blue_marb
 ```
 
 ```{r}
-## Getting the white circle emoji
 white_marb <- emojis |> 
   filter(str_detect(name, "white"), 
          str_detect(name, "circle")) |> 
@@ -108,12 +110,32 @@ tibble(
   marbles_emoji
 ```
 
+::: {.content-visible when-format="html"}
 ```{r}
 #| label: tbl-marbles-emoji
 #| tbl-cap: "Representing marble compositions with emoji"
 marbles_emoji |> 
   gt()
 ```
+:::
+
+**Update:** As it turns out, getting tables with emoji and the plots with `gt_plt_*()` do not play nice with LaTeX. For now, I'm saving the tables to png with `gtsave()` just for the pdf output.
+
+::: {.content-visible when-format="pdf"}
+```{r}
+#| eval: false
+fs::dir_create("tables/")
+renv::install("webshot2")
+```
+
+```{r}
+marbles_emoji |> 
+  gt() |> 
+  gtsave(filename = "tables/marb1.png")
+```
+
+![](tables/marb1.png){fig-align="center" width="60%"}
+:::
 
 Yes, this is it.
 
@@ -161,6 +183,7 @@ key_seq <- str_glue("{blue_marb}, {white_marb}, {blue_marb}")
 
 `gtExtras::gt_plt_bar_pct()` will plot a bar chart within the table.
 
+::: {.content-visible when-format="html"}
 ```{r}
 #| label: tbl-upate1
 #| tbl-cap: "Probability of each marble composition given (🔵, ⚪️, 🔵) samples with replacement."
@@ -175,11 +198,33 @@ marble_probs |>
                  scaled = T, 
                  fill = "steelblue")
 ```
+:::
+
+::: {.content-visible when-format="pdf"}
+```{r}
+marble_probs |> 
+  select(marbles, norm_probs) |> 
+  mutate(norm_probs = norm_probs * 100) |> 
+  gt() |> 
+  cols_label(
+    norm_probs = str_glue("p(marbles | {key_seq})")
+  ) |> 
+  gt_plt_bar_pct(norm_probs, 
+                 scaled = T, 
+                 fill = "steelblue")->
+  update_1
+
+gtsave(update_1, filename = "tables/update1.png")
+```
+
+![](tables/update1.png){fig-align="center" width="60%"}
+:::
 
 There we go!
 
 ### With the Bayesian Update
 
+::: {.content-visible when-format="html"}
 ```{r}
 #| label: tbl-upate2
 #| tbl-cap: "Probability of each marble composition given an additional (🔵) sample"
@@ -201,11 +246,41 @@ marble_probs |>
   gt_plt_bar_pct(norm_new, 
                  scaled = T, 
                  fill = "steelblue") |> 
-  ## Necessary to get the percent bars
-  ## to be equal length.
   cols_width(2 ~ px(200),
              3 ~ px(200))
 ```
+:::
+
+::: {.content-visible when-format="pdf"}
+
+```{r}
+marble_probs |> 
+  mutate(new_prob = blue_marbs/sum(blue_marbs),
+         multiplied = norm_probs * new_prob,
+         norm_new = multiplied/sum(multiplied)) |> 
+  select(marbles, norm_probs, norm_new) |> 
+  mutate(norm_probs = norm_probs * 100,
+         norm_new = norm_new * 100) |> 
+  gt() |> 
+  cols_label(
+    norm_probs = str_glue("p(marbles | {key_seq})"),
+    norm_new = str_glue("after {blue_marb}")
+  ) |> 
+  gt_plt_bar_pct(norm_probs, 
+                 scaled = T, 
+                 fill = "steelblue") |> 
+  gt_plt_bar_pct(norm_new, 
+                 scaled = T, 
+                 fill = "steelblue") |> 
+  cols_width(2 ~ px(200),
+             3 ~ px(200))->
+  update_2
+
+gtsave(update_2, filename = "tables/update2.png")
+```
+
+![](tables/update2.png){fig-align="center" width="80%"}
+:::
 
 ## Bayesian Updating
 
@@ -279,10 +354,11 @@ sequence_counts |>
   rowwise() |> 
   mutate(
     density = map2(
-      water, land, ~tibble(prop = seq(0.0001, 0.9999, length = 100),
-                           density_unstd = dbinom(water, size = water + land, prob = prop),
-                           density = density_unstd/sum(density_unstd)
-                           )
+      water, land, ~tibble(
+        prop = seq(0.0001, 0.9999, length = 100),
+        density_unstd = dbinom(water, size = water + land, prob = prop),
+        density = density_unstd/sum(density_unstd)
+        )
     )
   ) |> 
   unnest(density)->
@@ -309,6 +385,7 @@ sequence_counts |>
   wl_annotate
 ```
 
+::: {.content-visible when-format="html"}
 ```{r}
 #| label: fig-anim
 #| fig-cap: "Animated Bayesian Updating"
@@ -331,6 +408,33 @@ density_updates |>
   layout(
     showlegend = F
   )
+```
+:::
+
+**Update**: I started making this just for the pdf, which can't have the animation, but it's actually kind of nice enough to include in the html.
+
+```{r}
+#| label: fig-updates2
+#| fig-height: 5
+#| fig-cap: "Static figure of Bayesian Updating"
+density_updates |> 
+  group_by(prop) |> 
+  arrange(seq) |> 
+  mutate(
+    prev_density = lag(density),
+    facet_lab = str_glue("W:{water}, L{land}")
+  ) |> 
+  ggplot(aes(prop, density))+
+    geom_area(aes(y = prev_density), linetype = 2, alpha = 0.2)+
+    geom_area(alpha = 0.6, fill = "steelblue")+
+    scale_y_continuous(expand = expansion(mult = c(0,0)))+
+    facet_wrap(~facet_lab)+
+    theme(
+      axis.title.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.text.x = element_text(size = 8),
+      panel.grid.major.y = element_blank()
+    )
 ```
 
 ## On priors
@@ -426,11 +530,23 @@ binomial_densities |>
 
 ## Update!
 
+Thanks TJ!
 
-Thanks TJ! 
+<blockquote class="twitter-tweet">
 
-<blockquote class="twitter-tweet"><p lang="en" dir="ltr">i forgot how i know this but they are the same if you plug in <br><br>likelihood_beta = dbeta(prob, 1 + 6, 1 + 9-6),</p>&mdash; tj mahr 🍍🍕 (@tjmahr) <a href="https://twitter.com/tjmahr/status/1656396567601971203?ref_src=twsrc%5Etfw">May 10, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<p lang="en" dir="ltr">
 
+i forgot how i know this but they are the same if you plug in <br><br>likelihood_beta = dbeta(prob, 1 + 6, 1 + 9-6),
+
+</p>
+
+--- tj mahr 🍍🍕 (@tjmahr) <a href="https://twitter.com/tjmahr/status/1656396567601971203?ref_src=twsrc%5Etfw">May 10, 2023</a>
+
+</blockquote>
+
+```{=html}
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+```
 ```{r}
 #| label: fig-beta-vs-binom2
 #| fig-cap: "Comparing normalized densities for beta(6+1,3+1) and binom(6, 9, p)"

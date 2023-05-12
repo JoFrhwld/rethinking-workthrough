@@ -97,6 +97,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <link rel="stylesheet" href="../../styles.css">
+<meta property="og:title" content="Statistical Rethinking Workthrough Blog - 02 Small Worlds and Large Worlds">
+<meta property="og:description" content="">
+<meta property="og:image" content="index_files/figure-html/fig-obs1-1.png">
+<meta property="og:site-name" content="Statistical Rethinking Workthrough Blog">
+<meta name="twitter:title" content="Statistical Rethinking Workthrough Blog - 02 Small Worlds and Large Worlds">
+<meta name="twitter:description" content="">
+<meta name="twitter:image" content="index_files/figure-html/fig-obs1-1.png">
+<meta name="twitter:card" content="summary_large_image">
 </head>
 
 <body class="nav-sidebar floating nav-fixed slimcontent">
@@ -119,6 +127,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li class="nav-item">
     <a class="nav-link" href="../../about.html" rel="" target="">
  <span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="https://jofrhwld.github.io/blog/" rel="" target="">
+ <span class="menu-text">blog</span></a>
   </li>  
 </ul>
             <div class="quarto-navbar-tools">
@@ -151,7 +163,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <div>
       <div class="quarto-title-meta-heading">Author</div>
       <div class="quarto-title-meta-contents">
-               <p>Josef Fruehwald </p>
+               <p><a href="https://jofrhwld.github.io/">Josef Fruehwald</a> </p>
             </div>
     </div>
       
@@ -204,6 +216,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">Garden of Forking paths part 2</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/2023-05-10_04-sampling/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Starting Sampling</span></a>
+  </div>
+</li>
       </ul>
   </li>
     </ul>
@@ -213,7 +231,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
         
-    </div>
+    <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></div>
 <!-- main -->
 <main class="content quarto-banner-title-block page-columns page-full" id="quarto-document-content">
 
@@ -757,19 +775,19 @@ listening
 <dl class="code-annotation-container-hidden code-annotation-container-grid">
 <dt data-target-cell="annotated-cell-4" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-annotation="1" data-code-lines="2" data-code-cell="annotated-cell-4">I’ll capture everything within a tibble.</span>
+<span data-code-cell="annotated-cell-4" data-code-annotation="1" data-code-lines="2">I’ll capture everything within a tibble.</span>
 </dd>
 <dt data-target-cell="annotated-cell-4" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-annotation="2" data-code-lines="5" data-code-cell="annotated-cell-4">Rowwise, sample from <code>marbles</code> with replacement.</span>
+<span data-code-cell="annotated-cell-4" data-code-annotation="2" data-code-lines="5">Rowwise, sample from <code>marbles</code> with replacement.</span>
 </dd>
 <dt data-target-cell="annotated-cell-4" data-target-annotation="3">3</dt>
 <dd>
-<span data-code-annotation="3" data-code-lines="6" data-code-cell="annotated-cell-4">Return <code>T</code> or <code>F</code> if the sequence matches the pattern exactly.</span>
+<span data-code-cell="annotated-cell-4" data-code-annotation="3" data-code-lines="6">Return <code>T</code> or <code>F</code> if the sequence matches the pattern exactly.</span>
 </dd>
 <dt data-target-cell="annotated-cell-4" data-target-annotation="4">4</dt>
 <dd>
-<span data-code-annotation="4" data-code-lines="8" data-code-cell="annotated-cell-4">The <code>mean()</code> of the <code>T</code>, <code>F</code> column to get the proportion that match.</span>
+<span data-code-cell="annotated-cell-4" data-code-annotation="4" data-code-lines="8">The <code>mean()</code> of the <code>T</code>, <code>F</code> column to get the proportion that match.</span>
 </dd>
 </dl>
 </div>

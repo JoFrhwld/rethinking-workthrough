@@ -2,15 +2,21 @@ project:
   type: website
   output-dir: docs
 
-author: "Josef Fruehwald"
+author:
+  name: "Josef Fruehwald"
+  url: "https://jofrhwld.github.io/"
 
 website:
   title: "Statistical Rethinking Workthrough Blog"
   navbar:
     right:
       - about.qmd
+      - text: "blog"
+        href: "https://jofrhwld.github.io/blog/"
   sidebar:
     contents: posts
+  twitter-card: true
+  open-graph: true
 
 format:
   html:
@@ -21,6 +27,9 @@ format:
     fig-width: 6
     fig-height: 4
     fig-cap-location: margin
+  pdf:
+    include-in-header: gt_packages.sty
+
 
 knitr:
   opts_chunk:
