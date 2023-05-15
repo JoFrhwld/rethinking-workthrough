@@ -252,7 +252,6 @@ marble_probs |>
 :::
 
 ::: {.content-visible when-format="pdf"}
-
 ```{r}
 marble_probs |> 
   mutate(new_prob = blue_marbs/sum(blue_marbs),

@@ -27,14 +27,13 @@ format:
     fig-width: 6
     fig-height: 4
     fig-cap-location: margin
-  pdf:
-    include-in-header: gt_packages.sty
 
 
 knitr:
   opts_chunk:
     message: false
     warning: false
+    dev: "ragg_png"
 
 editor: visual
 
