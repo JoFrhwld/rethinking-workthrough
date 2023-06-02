@@ -1,0 +1,7 @@
+CXX = g++
+CXXFLAGS = -g -O2 -Wall -pedantic -Wconversion -Wno-sign-conversion
+
+FC = /usr/local/gfortran/bin/gfortran
+FLIBS = -L//usr/local/gfortran/lib/gcc/aarch64-apple-darwin22/12.2.0/ -L/usr/local/gfortran/lib -lgfortran -lquadmath -lm
+
+CXX14FLAGS += -O3 -mtune=native -arch arm64 -ftemplate-depth-256
