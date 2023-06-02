@@ -22,6 +22,9 @@ format:
   html:
     theme: sandstone
     css: styles.css
+    include-in-header: googlefont.html
+    mainfont: Nunito
+    monofont: "Fira Code"
     code-annotations: hover
     tbl-cap-location: margin
     fig-width: 6
