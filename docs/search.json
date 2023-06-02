@@ -112,11 +112,39 @@
     "text": "Updating probabilities\nWhat if we draw one more blue\n\nmarble_probs |&gt; \n  mutate(new_obs_prob = blue_marbs / sum(blue_marbs),\n         posterior_prob = norm_probs * new_obs_prob,\n         posterior_norm = posterior_prob/sum(posterior_prob))-&gt;\n  marble_probs\n\n\nmarble_probs |&gt; \n  ggplot(aes(blue_marbs, posterior_norm))+\n    geom_col(fill = \"steelblue4\")+\n    ylim(0,1)+\n      labs(\n      title = \"probability update after blue\",\n      x = \"# of blue marbles\",\n      y = \"probability\"\n    ) -&gt;\n  probs2\n\nprobs1 | probs2\n\n\n\n\nFigure 2: Bayesian update"
   },
   {
+    "objectID": "posts/2023-06-02_05-sampling2/index.html",
+    "href": "posts/2023-06-02_05-sampling2/index.html",
+    "title": "Sampling Summaries",
+    "section": "",
+    "text": "Listening"
+  },
+  {
+    "objectID": "posts/2023-06-02_05-sampling2/index.html#loading",
+    "href": "posts/2023-06-02_05-sampling2/index.html#loading",
+    "title": "Sampling Summaries",
+    "section": "Loading",
+    "text": "Loading\n\n\nCode\nlibrary(tidyverse)\nlibrary(patchwork)\nlibrary(tidybayes)\nlibrary(ggdist)\nlibrary(here)\n\nsource(here(\"_defaults.R\"))"
+  },
+  {
+    "objectID": "posts/2023-06-02_05-sampling2/index.html#setting-up-the-grid-samples",
+    "href": "posts/2023-06-02_05-sampling2/index.html#setting-up-the-grid-samples",
+    "title": "Sampling Summaries",
+    "section": "Setting up the grid samples",
+    "text": "Setting up the grid samples\n\ntibble(\n  p = seq(0, 1, length = 1000),\n  dens = dbeta(p, 6+1, 3+1),\n  posterior = dens/sum(dens)\n) -&gt;\n  posterior_grid\n\n\nposterior_grid |&gt; \n  ggplot(aes(p, posterior))+\n    geom_area(fill = ptol_blue, color = \"black\")\n\n\n\n\n\nSampling from the posterior\n\nposterior_grid |&gt; \n  sample_n(\n    size = 1e4,\n    replace = T,\n    weight = posterior\n  )-&gt;\n  posterior_samples\n\nThis isn’t MCMC sampling, but I’ll plot it as a line just for consistency for how MCMC chains look.\n\nposterior_samples |&gt; \n  mutate(\n    sample = row_number()\n  ) |&gt; \n  ggplot(aes(sample, p))+\n    geom_line()\n\n\n\n\nComparing to the sampling to the original density function.\n\nposterior_samples |&gt; \n  ggplot(aes(p))+\n    stat_density(\n      fill = ptol_blue\n      ) +\n    geom_line(\n      data = posterior_grid,\n      aes(y = dens),\n      color = ptol_red,\n      linewidth = 1\n    )"
+  },
+  {
+    "objectID": "posts/2023-06-02_05-sampling2/index.html#quantiles",
+    "href": "posts/2023-06-02_05-sampling2/index.html#quantiles",
+    "title": "Sampling Summaries",
+    "section": "Quantiles",
+    "text": "Quantiles\nFirst manually\n\nposterior_samples |&gt; \n  reframe(\n    lowhi = quantile(p, probs = c(0.25, 0.75))\n  ) |&gt; \n  pull(lowhi)-&gt;\n  fifty_quantile\n\n\nposterior_samples |&gt; \n  ggplot(aes(p))+\n    ggdist::stat_slab(\n      color = \"black\",\n      aes(\n        fill = after_stat(\n          x &gt;= fifty_quantile[1] & x &lt;= fifty_quantile[2]\n        )\n      )\n    )+\n    labs(\n      fill = \"fifty\",\n      y = NULL\n    )+\n    scale_fill_manual(\n      values = c(\"grey90\", ptol_blue)\n    )+\n    theme(\n      axis.text.y = element_blank(),\n      panel.grid.major.y = element_blank()\n    )\n\n\n\n\nI think I’ll create a shortcut theme for having no y axis.\n\ntheme_no_y &lt;- function(){\n  theme(\n      axis.text.y = element_blank(),\n      axis.title.y = element_blank(),\n      panel.grid.major.y = element_blank()\n    )\n}\n\n\nposterior_samples |&gt; \n  ggplot(aes(p))+\n    stat_slab() +\n    theme_no_y()\n\n\n\n\n\nTidybayes functions\nI’m not 100% sure how all of the tidybayes functions work.\n\nposterior_samples |&gt; \n  summarise(\n    median_qi(p, .width = 0.5)\n  )\n\n# A tibble: 1 × 6\n      y  ymin  ymax .width .point .interval\n  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;    \n1 0.644 0.542 0.738    0.5 median qi       \n\n\n\nposterior_samples |&gt; \n  reframe(\n    quantile  = quantile(p, probs = c(0.25, 0.5, 0.75))\n  )\n\n# A tibble: 3 × 1\n  quantile\n     &lt;dbl&gt;\n1    0.542\n2    0.644\n3    0.738\n\n\nOk, *_qi() returns the quantile interval.\nI’d like to make the plot according to the statistics calculated by stat_halfeye(), but can’t seem to get it to work.\n\nposterior_samples |&gt; \n  ggplot(aes(p))+\n    stat_halfeye(\n      .width = 0.5,\n      aes(\n        fill = after_stat(x &gt; xmin)\n      )\n    )\n\n\n\n\nI’ll just do the same filling I did before.\n\nposterior_samples |&gt; \n  ggplot(aes(p))+\n    stat_halfeye(\n      .width = 0.5,\n      point_interval = median_qi,\n      slab_color = \"black\",\n      aes(\n        fill = after_stat(\n          x &gt;= fifty_quantile[1] & x &lt;= fifty_quantile[2]\n        )\n      )\n    )+\n  scale_fill_manual(\n      values = c(\"grey90\", ptol_blue)\n    )+\n  labs(fill = \"fifty\")+\n  theme_no_y()-&gt;\n  fifty_qi\nfifty_qi\n\n\n\n\n\n\nHPDI\nLemme try hpdi now.\n\nposterior_samples |&gt; \n  summarise(\n    mean_hdi(p, .width = 0.5)\n  )-&gt;\n  posterior_hdi\n\n\nposterior_samples |&gt; \n  ggplot(aes(p))+\n    stat_halfeye(\n      .width = 0.5,\n      point_interval = median_hdi,\n      slab_color = \"black\",\n      aes(\n        fill = after_stat(\n          x &gt;= posterior_hdi$ymin & \n            x &lt;=  posterior_hdi$ymax\n        )\n      )\n    )+\n  scale_fill_manual(\n      values = c(\"grey90\", ptol_blue)\n    )+\n  labs(fill = \"fifty\")+\n  theme_no_y()-&gt;\n  fifty_hdi\nfifty_hdi\n\n\n\n\n\nfifty_qi/fifty_hdi\n\n\n\n\nThey’re very similar, but if I mix the qi fill and the hdi interval, they’re different.\n\nposterior_samples |&gt; \n  ggplot(aes(p))+\n    stat_halfeye(\n      .width = 0.5,\n      point_interval = median_hdi,\n      slab_color = \"black\",\n      aes(\n        fill = after_stat(\n         x &gt;= fifty_quantile[1] & x &lt;= fifty_quantile[2]\n        )\n      )\n    )+\n  scale_fill_manual(\n      values = c(\"grey90\", ptol_blue)\n    )+\n  labs(fill = \"fifty\")+\n  theme_no_y()"
+  },
+  {
     "objectID": "index.html",
     "href": "index.html",
     "title": "Statistical Rethinking Workthrough Blog",
     "section": "",
-    "text": "Starting Sampling\n\n\n\n\n\n\n\n\n\n\n\n\nOct 15, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nGarden of Forking paths part 2\n\n\n\n\n\n\n\n\n\n\n\n\nMay 10, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\n01 Golem of Prague Chapter\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nSetup\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\n02 Small Worlds and Large Worlds\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\nNo matching items"
+    "text": "Sampling Summaries\n\n\n\n\n\n\n\n\n\n\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nStarting Sampling\n\n\n\n\n\n\n\n\n\n\n\n\nOct 15, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nGarden of Forking paths part 2\n\n\n\n\n\n\n\n\n\n\n\n\nMay 10, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\n01 Golem of Prague Chapter\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nSetup\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\n02 Small Worlds and Large Worlds\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "about.html",
