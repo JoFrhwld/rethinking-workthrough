@@ -12,6 +12,9 @@ options(
   ggplot2.continuous.fill = khroma::scale_fill_batlow
 )
 
+ptol_blue = "#4477aa"
+ptol_red = "#EE6677"
+
 ragg_png <- function(..., res = 150) {
   ragg::agg_png(..., res = res, units = "in")
 }
