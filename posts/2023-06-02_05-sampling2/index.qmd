@@ -1,5 +1,6 @@
 ---
 title: "Sampling Summaries"
+order: 06
 ---
 
 ::: callout-note
