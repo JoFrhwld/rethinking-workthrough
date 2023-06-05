@@ -1,6 +1,7 @@
 ---
 title: "Sampling Summaries"
 order: 06
+date: 2023-06-02
 ---
 
 ::: callout-note
