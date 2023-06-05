@@ -1,0 +1,16 @@
+{
+  "hash": "d540810e5594d482a263fcf90cd4b951",
+  "result": {
+    "markdown": "---\ntitle: \"Linear Models: Part 1\"\ndate: 2023-06-05\norder: 08\n---\n\n\n::: callout-note\n## Listening\n\n<iframe style=\"border-radius:12px\" src=\"https://open.spotify.com/embed/track/7AlWVgCBCZtjYGayAqYLPH?utm_source=generator\" width=\"100%\" height=\"152\" frameBorder=\"0\" allowfullscreen allow=\"autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture\" loading=\"lazy\">\n\n</iframe>\n:::\n\n## Loading\n\n\n::: {.cell}\n\n```{.r .cell-code}\nlibrary(tidyverse)\nlibrary(ggdist)\nlibrary(here)\n\nsource(here(\"_defaults.R\"))\n```\n:::\n\n\n## Simulating a Galton Board\n\n> \"Suppose you and a thousand of your closest friends line up in the halfway line of a soccer field.\"\n\nOk, so the N is 1+1,000 (\"you and 1000 of your closest friends\"). Apparently a soccer field is 360 feet long, and an average stride length is something like 2.3 feet.\n\n\n::: {.cell}\n\n```{.r .cell-code}\n(360/2)/2.3\n```\n\n::: {.cell-output .cell-output-stdout}\n```\n[1] 78.26087\n```\n:::\n:::\n\n\nWe can get in 78 steps from the halfway line to the end of the field.\n\n\n::: {.cell}\n\n```{.r .cell-code}\nset.seed(500)\n\nexpand_grid(\n  person = 1:1001,\n  step = 1:78\n) |> \n  mutate(\n    flip = sample(\n      c(-1, 1), \n      size = n(), \n      replace = T\n    )\n  ) |> \n  mutate(\n    .by = person,\n    position = cumsum(flip)\n  ) ->\n  galton_board\n```\n:::\n\n::: {.cell}\n\n```{.r .cell-code}\ngalton_board |> \n  ggplot(\n    aes(step, position)\n  )+\n    geom_line(\n      aes(group = person),\n      alpha = 0.05\n    ) +\n  scale_x_reverse()+\n  coord_flip()\n```\n\n::: {.cell-output-display}\n![](Untitled_files/figure-html/unnamed-chunk-4-1.png){width=576}\n:::\n:::\n\n\nIt's hard to visualize well with the completely overlapping points. I'll plot histograms for very 10th step.\n\n\n::: {.cell}\n\n```{.r .cell-code}\ngalton_board |> \n  filter(step %in% seq(10, 70, by = 10)) |> \n  ggplot(aes(position, factor(step)))+\n    stat_histinterval(\n      breaks = breaks_fixed(width = 2),\n      aes(fill = after_stat(pdf))\n    )+\n    khroma::scale_fill_bilbao(\n      guide = \"none\"\n    )+\n    scale_y_discrete(\n      limits = factor(seq(70, 10, by = -10))\n    )\n```\n\n::: {.cell-output-display}\n![](Untitled_files/figure-html/unnamed-chunk-5-1.png){width=576}\n:::\n:::\n",
+    "supporting": [
+      "Untitled_files"
+    ],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

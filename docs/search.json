@@ -98,6 +98,48 @@
     "text": "I’ve set up the blog using the default quarto blog template in RStudio, also initializing a git repo and renv.\n\nrenv::install(c(\"tidyverse\", \"brms\"))\nrenv::install(c(\"coda\", \"mvtnorm\", \"dagitty\"))\n\nThe preface wants to install the book package with devtooks::install_github(), but I’m pretty sure that’s been superseded with remotes::install_github(), and renv::install().\n\ninstall.packages(\"cmdstanr\", repos = c(\"https://mc-stan.org/r-packages/\", getOption(\"repos\")))\nrenv::install(\"rmcelreath/rethinking\")"
   },
   {
+    "objectID": "posts/2023-06-05_07-linear-models-1/index.html",
+    "href": "posts/2023-06-05_07-linear-models-1/index.html",
+    "title": "Linear Models: Part 1",
+    "section": "",
+    "text": "Listening"
+  },
+  {
+    "objectID": "posts/2023-06-05_07-linear-models-1/index.html#loading",
+    "href": "posts/2023-06-05_07-linear-models-1/index.html#loading",
+    "title": "Linear Models: Part 1",
+    "section": "Loading",
+    "text": "Loading\n\nlibrary(tidyverse)\nlibrary(ggdist)\nlibrary(here)\n\nsource(here(\"_defaults.R\"))"
+  },
+  {
+    "objectID": "posts/2023-06-05_07-linear-models-1/index.html#simulating-a-galton-board",
+    "href": "posts/2023-06-05_07-linear-models-1/index.html#simulating-a-galton-board",
+    "title": "Linear Models: Part 1",
+    "section": "Simulating a Galton Board",
+    "text": "Simulating a Galton Board\n\n“Suppose you and a thousand of your closest friends line up in the halfway line of a soccer field.”\n\nOk, so the N is 1+1,000 (“you and 1000 of your closest friends”). Apparently a soccer field is 360 feet long, and an average stride length is something like 2.3 feet.\n\n(360/2)/2.3\n\n[1] 78.26087\n\n\nWe can get in 78 steps from the halfway line to the end of the field.\n\nset.seed(500)\n\nexpand_grid(\n  person = 1:1001,\n  step = 1:78\n) |&gt; \n  mutate(\n    flip = sample(\n      c(-1, 1), \n      size = n(), \n      replace = T\n    )\n  ) |&gt; \n  mutate(\n    .by = person,\n    position = cumsum(flip)\n  ) -&gt;\n  galton_board\n\n\ngalton_board |&gt; \n  mutate(\n    .by = c(step, position),\n    n = n()\n  ) -&gt;\n  galton_board\n\n\ngalton_board |&gt; \n  ggplot(\n    aes(step, position)\n  )+\n    geom_line(\n      aes(group = person, color = n)\n    ) +\n  scale_x_reverse()+\n  khroma::scale_color_bilbao(\n      guide = \"none\"\n    )+  \n  coord_flip()\n\n\n\n\nIt’s hard to visualize well with the completely overlapping points. I’ll plot histograms for very 10th step.\n\ngalton_board |&gt; \n  filter(step %in% seq(10, 70, by = 10)) |&gt; \n  ggplot(aes(position, factor(step)))+\n    stat_histinterval(\n      breaks = breaks_fixed(width = 2),\n      aes(fill = after_stat(pdf))\n    )+\n    khroma::scale_fill_bilbao(\n      guide = \"none\"\n    )+\n    scale_y_discrete(\n      limits = factor(seq(70, 10, by = -10))\n    )"
+  },
+  {
+    "objectID": "posts/2023-06-05_07-linear-models-1/index.html#infinitesimal-galton-board",
+    "href": "posts/2023-06-05_07-linear-models-1/index.html#infinitesimal-galton-board",
+    "title": "Linear Models: Part 1",
+    "section": "Infinitesimal Galton Board",
+    "text": "Infinitesimal Galton Board\nSame as before, but now instead of flipping a coin for -1 and 1, values are sampled from \\(\\mathcal{U}(-1,1)\\).\n\nexpand_grid(\n  person = 1:1001,\n  step = 1:78\n) |&gt; \n  mutate(\n    flip = runif(\n      n(),\n      -1,\n      1\n    )\n  ) |&gt; \n  mutate(\n    .by = person,\n    position = cumsum(flip)\n  ) -&gt;\n  inf_galton_board\n\n\ninf_galton_board |&gt; \n  ggplot(aes(step, position))+\n    geom_line(\n      aes(group = person),\n      alpha = 0.05\n    )+\n  scale_x_reverse()+\n  coord_flip()\n\n\n\n\n\ninf_galton_board |&gt; \n  filter(step %in% seq(10, 70, by = 10)) |&gt; \n  ggplot(aes(position, factor(step)))+\n    stat_slabinterval(\n      aes(fill = after_stat(pdf)), \n      fill_type = \"gradient\"\n    )+\n    khroma::scale_fill_bilbao(\n      guide = \"none\"\n    )+\n    scale_y_discrete(\n      limits = factor(seq(70, 10, by = -10))\n    )\n\n\n\n\nNice.\nI’m not 100% sure how to get a normal density estimate superimposed in that same plot. So I’ll fake it instead.\n\ninf_galton_board |&gt; \n  filter(step %in% seq(10, 70, by = 10)) -&gt;\n  ten_steps\n\nten_steps |&gt; \n1  summarise(\n    .by = step,\n    mean = mean(position),\n    sd = sd(position)\n  ) |&gt; \n  nest(\n    .by = step\n  ) |&gt; \n  mutate(\n2    dist = map(\n      data,\n      ~tibble(\n        position = seq(-20, 20, length = 100),\n        dens = dnorm(\n          position, \n          mean = .x$mean, \n          sd = .x$sd\n        )\n      )\n    )\n  ) |&gt; \n  unnest(dist) |&gt; \n3  mutate(\n    dens_norm = dens/max(dens)\n  )-&gt;\n  distributions\n\n\n1\n\nCalculating the distribution parameters for each step grouping.\n\n2\n\nMapping over the distribution parameters to get density values in a tibble.\n\n3\n\nFor plotting over the stat_slab() output, normalizing the density to max out at 1.\n\n\n\n\n\nten_steps |&gt; \n  ggplot(aes(position))+\n    stat_slabinterval(\n      aes(fill = after_stat(pdf)), \n      fill_type = \"gradient\"\n    )+\n    geom_line(\n      data = distributions,\n      aes(y = dens_norm)\n    )+\n    khroma::scale_fill_bilbao(\n      guide = \"none\"\n    )+\n    facet_wrap(\n      ~step, labeller = label_both\n    )+\n    theme_no_y()\n\n\n\n\n\nComparing parameters\nFor my own interest, I wonder how much discrete sampling from -1, 1 vs the uniform distribution affects the \\(\\sigma\\).\n\ngalton_board |&gt; \n  summarise(\n    .by = step,\n    pos_sd = sd(position)\n  ) |&gt; \n  mutate(\n    sampling = \"discrete\"\n  ) -&gt;\n  galton_sd\n\ninf_galton_board |&gt; \n  summarise(\n    .by = step,\n    pos_sd = sd(position)\n  ) |&gt; \n  mutate(\n    sampling = \"uniform\"\n  )-&gt;\n  inf_galton_sd\n\n\nbind_rows(\n  galton_sd, \n  inf_galton_sd\n) |&gt; \n  ggplot(aes(step, pos_sd))+\n    geom_line(\n      aes(color = sampling),\n      linewidth = 1\n    )+\n    expand_limits(y = 0)+\n    labs(\n      y = expression(sigma)\n    )\n\n\n\n\nMessing around with a few obvious values of \\(x\\), in \\(\\mathcal{U}(-x,x)\\), I can’t tell what would approximate the discrete sampling. 2 is too large, and 1.5 is too small. The answer is probably some horror like \\(\\frac{\\pi}{e}\\).1"
+  },
+  {
+    "objectID": "posts/2023-06-05_07-linear-models-1/index.html#model-diagrams",
+    "href": "posts/2023-06-05_07-linear-models-1/index.html#model-diagrams",
+    "title": "Linear Models: Part 1",
+    "section": "Model Diagrams",
+    "text": "Model Diagrams\nHere’s the model described in the text.\n\\[\ny_i \\sim \\mathcal{N}(\\mu_i, \\sigma)\n\\]\n\\[\n\\mu_i = \\beta x_i\n\\]\n\\[\n\\beta \\sim \\mathcal{N}(0, 10)\n\\]\n\\[\n\\sigma \\sim \\text{Exponential}(1)\n\\]\nHe also defines a sampling distribution over \\(x_1\\), but idk if that’s right. Here’s my attempt at converting that into a mermaid diagram.\n\n\n\n\nflowchart RL\n  normal1[\"N(μᵢ, σ)\"] --&gt;|\"~\"| y[\"yᵢ\"]\n  beta[\"β\"] --&gt; mult1([\"×\"])\n  x[xᵢ] --&gt; mult1\n  mult1 --&gt; mu1[μᵢ]\n  mu1 --&gt; normal1\n  \n  exp1[\"Exp(1)\"] --\"~\"--&gt; sigma1[σ]\n  sigma1 --&gt; normal1\n  \n  normal2[\"N(0,10)\"] --\"~\"--&gt; beta\n\n\n\n\n\nIt’s ok. No quite a Kruschke diagram.\n\nAnother example.\nLet me try to write out the diagram for something like y ~ x + (1|z).\n\\[\ny \\sim(\\mu_i, \\sigma_0)\n\\]\n\\[\n\\mu_i = \\beta_0 + \\beta_1x_i + \\gamma_i\n\\]\n\\[\n\\beta_0 \\sim \\mathcal{N}(0,10)\n\\]\n\\[\n\\beta_2 \\sim \\mathcal{N}(0,2)\n\\]\n\\[\n\\gamma_i = \\Gamma_{z_i}\n\\]\n\\[\n\\Gamma_j \\sim \\mathcal{N}(0,\\sigma_1)\n\\]\n\\[\n\\sigma_0 \\sim \\text{Exponential}(1)\n\\]\n\\[\n\\sigma_1 \\sim \\text{Exponential}(1)\n\\]\n\nGeeze, idk. That double subscript feels rough, and I don’t know the convention for describing the random effects.\n\n\n\n\nflowchart TD\n  normal1[\"N(μᵢ, σ₀)\"] --\"~\"--&gt; y[yᵢ]\n  beta0[\"β₀\"] --&gt; plus([\"+\"])\n  beta1[\"β₁\"] --&gt; plus\n  gamma[\"γᵢ\"] --&gt; plus\n  plus --&gt; mu[\"μᵢ\"]\n  mu --&gt; normal1\n  normal2[\"N(0,10)\"] --\"~\"--&gt; beta0\n  normal3[\"N(0,2)\"] --\"~\"--&gt; beta1\n  Gamma[\"Γ[zᵢ]\"] --&gt; gamma\n  normal4[\"N(0, σ₁)\"] --\"~\"--&gt; Gamma\n  exponent0[\"Exp(1)\"] --\"~\"--&gt; sigma0[\"σ₀\"]\n  sigma0 --&gt; normal1\n  exponent1[\"Exp(1)\"] --\"~\"--&gt; sigma1[\"σ₁\"]\n  sigma1 --&gt; normal4\n  \n\n\n\n\n\nYeah, this is too tall. Will have to think about this. The Krushke style diagram is the most compressed version imo."
+  },
+  {
+    "objectID": "posts/2023-06-05_07-linear-models-1/index.html#footnotes",
+    "href": "posts/2023-06-05_07-linear-models-1/index.html#footnotes",
+    "title": "Linear Models: Part 1",
+    "section": "Footnotes",
+    "text": "Footnotes\n\n\nNot literally \\(\\frac{\\pi}{e}\\) though, cause that’s too small at 1.156↩︎"
+  },
+  {
     "objectID": "posts/2023-05-10_03-forking-paths-2/index.html",
     "href": "posts/2023-05-10_03-forking-paths-2/index.html",
     "title": "Garden of Forking paths part 2",
@@ -193,7 +235,7 @@
     "href": "index.html",
     "title": "Statistical Rethinking Workthrough Blog",
     "section": "",
-    "text": "Predictive Distributions\n\n\n\n\n\n\n\n\n\n\n\n\nJun 5, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nSampling Summaries\n\n\n\n\n\n\n\n\n\n\n\n\nJun 2, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nStarting Sampling\n\n\n\n\n\n\n\n\n\n\n\n\nMay 15, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nGarden of Forking paths part 2\n\n\n\n\n\n\n\n\n\n\n\n\nMay 10, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\n01 Golem of Prague Chapter\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nSetup\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\n02 Small Worlds and Large Worlds\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\nNo matching items"
+    "text": "Predictive Distributions\n\n\n\n\n\n\n\n\n\n\n\n\nJun 5, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nLinear Models: Part 1\n\n\n\n\n\n\n\n\n\n\n\n\nJun 5, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nSampling Summaries\n\n\n\n\n\n\n\n\n\n\n\n\nJun 2, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nStarting Sampling\n\n\n\n\n\n\n\n\n\n\n\n\nMay 15, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nGarden of Forking paths part 2\n\n\n\n\n\n\n\n\n\n\n\n\nMay 10, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\n01 Golem of Prague Chapter\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\nSetup\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\n  \n\n\n\n\n02 Small Worlds and Large Worlds\n\n\n\n\n\n\n\n\n\n\n\n\nMay 9, 2023\n\n\nJosef Fruehwald\n\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "about.html",
