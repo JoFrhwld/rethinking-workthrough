@@ -883,6 +883,20 @@
       ],
       "Hash": "15e9634c0fcd294799e9b2e929ed1b86"
     },
+    "ggblend": {
+      "Package": "ggblend",
+      "Version": "0.1.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "ggplot2",
+        "grid",
+        "methods",
+        "rlang"
+      ],
+      "Hash": "8e8c11d18ccb1660e724ce74b8f485bf"
+    },
     "ggdist": {
       "Package": "ggdist",
       "Version": "3.3.0",
