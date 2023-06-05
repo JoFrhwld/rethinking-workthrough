@@ -5,6 +5,15 @@ theme_set(
   )
 )
 
+theme_no_y <- function(){
+  theme(
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.major.y = element_blank()
+  )
+}
+
+
 options(
   ggplot2.discrete.colour = khroma::scale_color_bright,
   ggplot2.discrete.fill = khroma::scale_fill_bright,
@@ -18,4 +27,5 @@ ptol_red = "#EE6677"
 ragg_png <- function(..., res = 150) {
   ragg::agg_png(..., res = res, units = "in")
 }
+
 
