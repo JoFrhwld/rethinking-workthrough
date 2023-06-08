@@ -1,0 +1,725 @@
+---
+title: "Linear models, part 2"
+date: 2023-06-08
+order: 09
+format: 
+  html:
+   mermaid:
+     theme: neutral
+---
+
+::: callout-note
+## Listening
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/2E1ZDtrJtsWdkyIbPDwFTu?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+
+</iframe>
+:::
+
+## Loading
+
+```{r}
+library(tidyverse)
+library(ggdist)
+library(ggblend)
+library(here)
+
+source(here("_defaults.R"))
+```
+
+## Finessing the model diagram
+
+I think I've improved on [the model diagram from the last post](../2023-06-05_07-linear-models-1/index.qmd). Some things I'm still struggling with:
+
+-   Formatting the node text. Can't seem to get either html nor markdown formatting to work.
+
+-   The background color on edge labels is absent, making the "\~" illegible.
+
+```{mermaid}
+%%| echo: true
+flowchart TD
+  subgraph exp2["Exp"]
+    one2["1"]
+  end
+  exp2 -.-> sigma4
+  
+  subgraph normal4["normal"]
+    mu4["μ=0"]
+    sigma4["σ"]
+  end
+  normal4 -.-> Gamma[γj]
+  Gamma --> gamma1
+  
+  subgraph normal3["normal"]
+    mu3["μ=0"]
+    sigma3["σ=10"]
+  end
+  normal3 -.-> beta1
+  
+  subgraph normal2["normal"]
+    mu2["μ=0"]
+    sigma2["σ=10"]
+  end
+  normal2 -.-> beta0
+  
+  subgraph sum1["+"]
+    beta0["β₀"]
+    subgraph mult1["×"]
+      beta1["β₁"]
+      x["xᵢ"]
+    end
+    gamma1["γj[i]"]
+  end
+  
+  sum1 --> mu1
+  
+  subgraph exp1["Exp"]
+    one1[1]
+  end
+  exp1 -.->|"~"| sigma1
+  
+  subgraph normal1["normal"]
+    mu1["μᵢ"]
+    sigma1["σ"]
+  end
+  
+  normal1 -.->|"~"| y["yᵢ"]
+```
+
+Here's the global water model. I'll replace the $\mathcal{U}(0,1)$ prior with the equivalent beta distribution, just for the consistency of going beta -\> binomial/bernoulli. I'll also notate the beta distribution with [mean and precision](https://www.andrewheiss.com/blog/2021/11/08/beta-regression-guide/#mean-and-precision-instead-of-shapes).
+
+$$
+\mathcal{U}(0,1) = \text{Beta}(a=1, b=1) = \text{Beta}(\mu=0.5, \phi=2)
+$$
+
+because
+
+$$
+a = \mu\phi
+$$
+
+$$
+b = (1-\mu)\phi
+$$
+
+```{mermaid}
+flowchart TD
+
+subgraph beta1["beta"]
+  mu["μ=0.5"]
+  phi["ϕ=2"]
+end
+beta1 -.-> p
+
+subgraph binomial1["binomial"]
+  N
+  p
+end
+
+binomial1 -.-> W
+```
+
+## Height data
+
+`{cmdstanr}` is a dependency for `{rmcelreath/rethinking}`, and I don't want to deal with that right now, so I'm just going to read the data from github.
+
+```{r}
+read_delim(
+  "https://raw.githubusercontent.com/rmcelreath/rethinking/master/data/Howell1.csv", 
+  delim = ";"
+) ->
+  Howell1
+```
+
+```{r}
+library(gt)
+library(gtsummary)
+```
+
+`{gtsummary}` has a summary table function that's pretty ok. Not sure how to incorporate histograms into it like `rethinking::precis()`.
+
+```{r}
+Howell1 |> 
+  tbl_summary()
+```
+
+I'll get histograms with some pivoting and `ggdist::stat_slab(density="histogram")`
+
+```{r}
+Howell1 |> 
+  mutate(row = row_number()) |> 
+  pivot_longer(
+    -row,
+    names_to = "variable",
+    values_to = "value"
+    ) |> 
+  ggplot(aes(value))+
+    stat_slab(
+      normalize = "panels", 
+      density = "histogram"
+    )+
+    facet_wrap(
+      ~variable, 
+      scales = "free"
+    )+
+    theme_no_y()
+```
+
+Height has a pretty long leftward tail because children are included in the data.
+
+```{r}
+Howell1 |> 
+  ggplot(aes(height, factor(male)))+
+    stat_slab()
+```
+
+```{r}
+Howell1 |> 
+  ggplot(aes(age, height, color = factor(male)))+
+    geom_point()+
+    stat_smooth(method = "gam", formula = y ~ s(x, bs = 'cs'))
+```
+
+### Aside, experimenting with `{marginaleffects}`
+
+The Rethinking book just cuts the age at 18, but the trend for men and women in the figure above looks like it's still increasing until at least 25. I'll mess around with `marginaleffects::slopes()` to see when the growth trend really stops.
+
+```{r}
+library(mgcv)
+library(marginaleffects)
+```
+
+`mgcv::gam()` doesn't like it when the `s(by=…)` argument isn't a factor, so preparing for modelling.
+
+```{r}
+Howell1 |> 
+  mutate(male = factor(male)) ->
+  height_to_mod
+```
+
+```{r}
+mod <- gam(height ~ male + s(age, by = male), data = height_to_mod)
+```
+
+I'd have to double check the documentation for how to specify which variable you want the slope across, but I know how to do it with a new dataframe, so I'll just do that and filter. I set `eps` to 1, which I think will estimate the number of centimeters per year.
+
+```{r}
+slopes(
+  mod,
+  eps = 1,
+  newdata = datagrid(
+    age = 0:80,
+    male = c(0,1)
+  )
+) |> 
+  as_tibble() |> 
+  filter(term == "age") ->
+  age_slopes
+
+age_slopes |> 
+  ggplot(aes(age, estimate, color = male))+
+    geom_ribbon(
+      aes(
+        ymin = conf.low,
+        ymax = conf.high,
+        fill = male
+      ),
+      alpha = 0.5
+    )
+```
+
+As a quick and dirty heuristic, I'll just check what the earliest age is that the high and low sides of the confidence interval have different signs.
+
+```{r}
+age_slopes |> 
+  filter(sign(conf.low) != sign(conf.high))  |> 
+  arrange(age) |> 
+  group_by(male) |> 
+  slice(1) |> 
+  select(term, age, male, estimate, conf.low, conf.high)
+```
+
+Looks like the age women probably stopped growing is \~24 and for men \~28. So I'll filter the data for age \>= 30 just to be safe.
+
+## Height normality
+
+```{r}
+stable_height <- Howell1 |> 
+  filter(age >= 30)
+```
+
+```{r}
+stable_height |> 
+  ggplot(aes(height))+
+    stat_slab()
+```
+
+```{r}
+stable_height |> 
+  ggplot(aes(height, factor(male)))+
+    stat_slab()
+```
+
+## The Model
+
+Rethinking gives the following model specification.
+
+$$
+h_i \sim \mathcal{N}(\mu, \sigma)
+$$
+
+$$
+\mu \sim \mathcal{N}(178, 20)
+$$
+
+$$
+\sigma \sim \mathcal{U}(0,50)
+$$
+
+```{mermaid}
+flowchart TD
+
+subgraph uniform1["uniform"]
+  a["a=0"]
+  b["b=50"]
+end
+uniform1 -.-> sigma1
+
+subgraph normal2["normal"]
+  mu2["μ=178"]
+  sigma2["σ=20"]
+end
+normal2 -.-> mu1
+
+subgraph normal1["normal"]
+  mu1["μ"]
+  sigma1["σ"]
+end
+
+normal1 -.-> h["hᵢ"]
+```
+
+Just for some heuristics, I'll calculate the mean, standard error of the mean, and standard deviation of the data.
+
+```{r}
+stable_height |> 
+  summarise(
+     mean = mean(height),
+     sd = sd(height),
+     sem = sd/sqrt(n())
+  ) |> 
+  gt() |> 
+  fmt_number(decimals = 1)
+```
+
+So, the $\sigma$ for the hyperprior is *much* higher than the standard error, which is good, cause I guess we'd want our prior to be looser than the uncertainty we have about the sample mean.
+
+I think I'd like to look at our sample estimates and how they compare to the priors.
+
+```{r}
+bind_rows(
+  tibble(
+    x = seq(118, 238, length = 100),
+    dens = dnorm(
+      x,
+      mean = 178,
+      sd = 20
+    ),
+    param = "mu"
+  ),
+  tibble(
+    x = seq(0, 50, length = 100),
+    dens = dunif(x, 0, 50),
+    param = "sigma"
+  )
+)->
+  model_priors
+
+bind_rows(
+  tibble(
+    param = "mu",
+    x = 154.6,
+    dens = dnorm(
+      x,
+      mean = 178,
+      sd = 20
+    ),
+  ),
+  tibble(
+    param = "sigma",
+    x = 7.8,
+    dens = dunif(x, 0, 50)
+  )
+)->
+  sample_estimates
+```
+
+```{r}
+model_priors |> 
+  ggplot(aes(x, dens))+
+    geom_area(fill = "grey80")+
+    geom_point(
+      data = sample_estimates,
+      size = 3
+    )+
+    geom_segment(
+      data = sample_estimates,
+      aes(
+        xend = x,
+        yend = 0
+      ),
+      linewidth = 1
+    )+
+    facet_wrap(
+      ~param, 
+      scales = "free_x"
+      )+
+    theme_no_y()
+```
+
+I'll try setting up the priors like they are in the book *without* looking at Solomon Kurz' translation, then double check I did it right.
+
+```{r}
+library(brms)
+```
+
+I know that you can set up a model formula with just `bf()`.
+
+```{r}
+height_formula <- bf(
+  height ~ 1
+)
+```
+
+And I know you can get a table of the default priors it plans to use with `get_prior()`.
+
+```{r}
+get_prior(height_formula, data = stable_height) |> 
+  gt()
+```
+
+`{ggdist}` has a way of parsing and plotting these distributions pretty directly, but to get it how I want it to be requires getting a little hacky with ggplot2.
+
+```{r}
+#| code-fold: true
+get_prior(height_formula, data = stable_height) |> 
+  parse_dist(prior) |> 
+  ggplot(aes(dist = .dist, args = .args))+
+    stat_slab(aes(fill = after_stat(y>0)))+
+    facet_wrap(~class, scales = "free_x")+
+    scale_fill_manual(
+      values = c("#ffffff00", ptol_blue),
+      guide = "none")+
+    coord_flip()
+```
+
+Anyway, to set up the priors like it is in the book, we need to do this. (Note from future Joe: I'd gotten this close, but had messed up how non-standard evaluation works and had to check Solomon Kurz' book. e.g, there's no function called `normal()`).
+
+```{r}
+c(
+  prior(
+    prior = normal(178, 20),
+    class = Intercept
+  ),
+  prior(
+    prior = uniform(0,50),
+    lb = 0,
+    ub = 50,
+    class = sigma
+  )
+) -> example_priors
+
+example_priors |> 
+  gt()
+```
+
+```{r}
+brm(
+  height_formula,
+  prior = example_priors,
+  family = gaussian,
+  data = stable_height,
+  sample_prior = T,
+  file = "height_mod.rds"
+) ->
+  height_mod
+```
+
+```{r}
+height_mod
+```
+
+Well! Estimated parameters here are basically right on top of the maximum likelihood estimates from the sample, including the standard error of the Intercept.
+
+Having read over [the marginaleffects book](https://vincentarelbundock.github.io/marginaleffects/), I know I can get posterior draws of the predictions with `predictions() |> posterior_draws()`
+
+```{r}
+predictions(
+  height_mod,
+  newdata = datagrid()
+) |> 
+  posterior_draws() |> 
+  ggplot(aes(draw))+
+    stat_slabinterval()+
+    theme_no_y()
+```
+
+Since this was an intercept-only model, this is basically a distribution of the estimate for the intercept, rather than predicted *observed* values. So I can actually compare this to the prior.
+
+```{r}
+predictions(
+  height_mod,
+  newdata = datagrid()
+) |> 
+  posterior_draws() |> 
+  ggplot(aes(draw))+
+    stat_slabinterval()+
+    geom_line(
+      data = model_priors |> 
+        filter(param == "mu"),
+      aes(
+        x = x,
+        y = dens/max(dens),
+        )
+    )+
+    theme_no_y()
+```
+
+To compare the predicted observed values from the model to the actual data, we can use `brms::pp_check()`.
+
+```{r}
+pp_check(height_mod)+
+  khroma::scale_color_bright()
+```
+
+### General look at parameters
+
+To get the posterior samples of the parameters, I think we need to turn to tidybayes.
+
+```{r}
+library(tidybayes)
+```
+
+To get the parameter names that we want to get samples from, `tidybayes::get_variables()` on the model.
+
+```{r}
+get_variables(height_mod)
+```
+
+The non standard evaluation here still kind of freaks me out. I'll use `spread_draws()` which will put the posterior draw for each parameter in its own column.
+
+```{r}
+height_mod |> 
+  spread_draws(
+   b_Intercept,
+   sigma
+  ) ->
+  height_param_wide
+
+head(height_param_wide)
+```
+
+```{r}
+height_param_wide |> 
+  ggplot(aes(b_Intercept, sigma))+
+    geom_point()+
+    theme(aspect.ratio = 1)
+```
+
+To get the parameters long-wise, we need to use `gather_draws()`. I'm assuming the function names for `{tidybayes}` were settled in back when the pivoting functions in `{tidyr}` were still `gather()` and `spread()`.[^1]
+
+[^1]: I still have a soft spot for `reshape2::melt()` and `reshape2::cast()`.
+
+```{r}
+height_mod |> 
+  gather_draws(
+   b_Intercept,
+   sigma
+  ) ->
+  height_param_long
+
+head(height_param_long)
+```
+
+```{r}
+height_param_long |> 
+  ggplot(
+    aes(.value,)
+  )+
+    stat_slab()+
+    theme_no_y()+
+    facet_wrap(
+      ~.variable,
+      scales = "free_x"
+    )
+    
+```
+
+```{r}
+library(ggdensity)
+```
+
+```{r}
+height_param_wide |>  
+  ggplot(aes(b_Intercept, sigma))+
+    stat_hdr(fill = ptol_blue)+
+    theme(aspect.ratio = 1)
+```
+
+## The linear model
+
+The next thing the book moves onto is modelling height with weight.
+
+```{r}
+stable_height |> 
+  ggplot(aes(weight, height))+
+    geom_point()
+```
+
+We're going to standardize the weight measure. That way, the intercept & prior for the intercept will be defined at the mean weight.
+
+```{r}
+stable_height |> 
+  mutate(
+    weight0 = weight-mean(weight)
+  )->
+  height_to_mod
+```
+
+```{r}
+height_weight_formula <- bf(
+  height ~ 1 + weight0
+)
+```
+
+Get the default priors
+
+```{r}
+get_prior(
+  height_weight_formula,
+  data = height_to_mod
+) |> 
+  gt()
+```
+
+Define our custom priors, based on the first model in the book.
+
+```{r}
+height_weight_priors <- c(
+  prior(
+    prior = normal(178, 20),
+    class = Intercept
+  ),
+  prior(
+    prior = uniform(0,50),
+    lb = 0,
+    ub = 50,
+    class = sigma
+  ),
+  prior(
+    prior = normal(0,10),
+    class = b
+  )
+)
+
+height_weight_priors |> 
+  gt()
+```
+
+```{r}
+#| code-fold: true
+height_weight_priors |> 
+  parse_dist(prior) |> 
+  ggplot(aes(dist = .dist, args = .args))+
+    stat_slab()+
+    facet_wrap(~class, scales = "free_x")+
+    coord_flip()
+```
+
+```{r}
+brm(
+  height_weight_formula,
+  prior = height_weight_priors,
+  data = height_to_mod, 
+  file = "height_weight_mod.rds",
+  file_refit = "on_change"
+) ->
+  height_weight_mod
+```
+
+```{r}
+height_weight_mod
+```
+
+Here's the usual kind of "fit + credible interval" plot.
+
+```{r}
+height_weight_mod |> 
+  predictions(
+    newdata = datagrid(
+      weight0 = seq(-13, 18, length = 100)
+    )
+  ) |> 
+  posterior_draws() |> 
+  mutate(
+    weight = weight0 + mean(height_to_mod$weight)
+  ) |> 
+  ggplot(
+    aes(weight, draw)
+  )+
+    stat_lineribbon()+
+    labs(
+      y = "height"
+    )+
+    scale_fill_brewer(palette = "Blues")
+```
+
+Here's the "all of the predicted fitted lines" plot.
+
+```{r}
+height_weight_mod |> 
+  predictions(
+    newdata = datagrid(
+      weight0 = seq(-13, 18, length = 100)
+    )
+  ) |> 
+  posterior_draws() |> 
+  mutate(
+    weight = weight0 + mean(height_to_mod$weight)
+  ) |> 
+  filter(
+    as.numeric(drawid) <= 100
+  ) |> 
+  ggplot(
+    aes(weight, draw)
+  )+
+    geom_line(
+      aes(group = drawid),
+      alpha = 0.1
+    )+
+    labs(
+      y = "height"
+    )
+```
+
+```{r}
+pp_check(height_weight_mod)+
+  khroma::scale_color_bright()
+```
+
+```{r}
+height_weight_mod |> 
+  get_variables()
+```
+
+```{r}
+height_weight_mod |> 
+  spread_draws(
+    `b_.*`,
+    sigma,
+    regex = T
+  ) |> 
+  ggplot(aes(b_Intercept, b_weight0))+
+    stat_hdr()+
+    theme(aspect.ratio = 1)
+```
