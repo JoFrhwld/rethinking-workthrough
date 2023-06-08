@@ -897,6 +897,22 @@
       ],
       "Hash": "8e8c11d18ccb1660e724ce74b8f485bf"
     },
+    "ggdensity": {
+      "Package": "ggdensity",
+      "Version": "1.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "MASS",
+        "ggplot2",
+        "isoband",
+        "scales",
+        "stats",
+        "tibble",
+        "vctrs"
+      ],
+      "Hash": "e54962536e4954ac823400b3c9e8e32e"
+    },
     "ggdist": {
       "Package": "ggdist",
       "Version": "3.3.0",
@@ -1310,6 +1326,19 @@
       ],
       "Hash": "1deaf1de3eac7e1d3377954b3a283652"
     },
+    "insight": {
+      "Package": "insight",
+      "Version": "0.19.2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "methods",
+        "stats",
+        "utils"
+      ],
+      "Hash": "e5389ad6bc8445203e2bbbe3f42fc96f"
+    },
     "isoband": {
       "Package": "isoband",
       "Version": "0.2.7",
@@ -1505,6 +1534,23 @@
         "R"
       ],
       "Hash": "7ce2733a9826b3aeb1775d56fd305472"
+    },
+    "marginaleffects": {
+      "Package": "marginaleffects",
+      "Version": "0.12.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "Rcpp",
+        "RcppEigen",
+        "checkmate",
+        "data.table",
+        "generics",
+        "insight",
+        "methods"
+      ],
+      "Hash": "25d221eb1b57fe8913715c645921f79f"
     },
     "markdown": {
       "Package": "markdown",
