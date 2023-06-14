@@ -1,0 +1,393 @@
+---
+title: "Reporting a linear model"
+date: 2023-06-14
+order: 10
+bibliography: references.bib
+---
+
+::: callout-note
+## Listening
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/36qnlcMxie7vHRJAyrElPR?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+
+</iframe>
+:::
+
+## Loading
+
+```{r}
+library(tidyverse)
+library(tidybayes)
+library(gt)
+
+library(brms)
+library(marginaleffects)
+library(broom.mixed)
+
+source(here::here("_defaults.R"))
+```
+
+## The plan
+
+Part of why I'm working through *Statistical Rethinking* as a blog is so that I can take some time and mess around with finessing how I'll visualize and report models like this, so I'm going to try to work over these basic models I just fit.
+
+### Data loading, prep, and model fits
+
+```{r}
+read_delim(
+  "https://raw.githubusercontent.com/rmcelreath/rethinking/master/data/Howell1.csv", 
+  delim = ";"
+) ->
+  Howell1
+```
+
+```{r}
+stable_height <- Howell1 |> 
+  filter(age >= 30)
+
+stable_height |> 
+  mutate(
+    weight0 = weight-mean(weight)
+  )->
+  height_to_mod
+```
+
+::: {.callout-note collapse="true"}
+## height_mod
+
+```{r}
+height_formula <- bf(
+  height ~ 1
+)
+```
+
+```{r}
+c(
+  prior(
+    prior = normal(178, 20),
+    class = Intercept
+  ),
+  prior(
+    prior = uniform(0,50),
+    lb = 0,
+    ub = 50,
+    class = sigma
+  )
+) ->
+  height_mod_priors
+```
+
+```{r}
+brm(
+  height_formula,
+  prior = height_mod_priors,
+  family = gaussian,
+  data = stable_height,
+  sample_prior = T,
+  save_pars = save_pars(all = TRUE),
+  file = "height_mod.rds",
+  file_refit = "on_change"
+) ->
+  height_mod
+```
+:::
+
+::: {.callout-note collapse="true"}
+## height_weight_mod
+
+```{r}
+height_weight_formula <- bf(
+  height ~ 1 + weight0
+)
+```
+
+```{r}
+height_weight_priors <- c(
+  prior(
+    prior = normal(178, 20),
+    class = Intercept
+  ),
+  prior(
+    prior = uniform(0,50),
+    lb = 0,
+    ub = 50,
+    class = sigma
+  ),
+  prior(
+    prior = normal(0,10),
+    class = b
+  )
+)
+```
+
+```{r}
+brm(
+  height_weight_formula,
+  prior = height_weight_priors,
+  data = height_to_mod, 
+  file = "height_weight_mod.rds",
+  save_pars = save_pars(all = TRUE),
+  file_refit = "on_change"
+) ->
+  height_weight_mod
+```
+:::
+
+## First look - Model Fit
+
+### Posterior predictive check
+
+First I'll go with the default type of `pp_check()`
+
+```{r}
+#| label: fig-ppcheck1
+#| fig-cap: "Posterior preditctive check for the `height~1` model"
+pp_check(height_mod, ndraws = 100)+
+  khroma::scale_color_bright()+
+  labs(
+    color = NULL,
+    title = "height ~ 1"
+  )+
+  theme_no_y()
+```
+
+So, the distribution of posterior predictions for the intercept only model puts a lot of probability where there's an actual dip in the original data.
+
+```{r}
+#| label: fig-ppcheck2
+#| fig-cap: "Posterior predictive check for the `height ~ weight` model."
+pp_check(height_weight_mod, ndraws = 100)+
+  khroma::scale_color_bright()+
+  labs(
+    color = NULL,
+    title = "height ~ weight"
+  )+
+  theme_no_y()
+```
+
+### $R^2$
+
+Let's get some goodness of fit parameters. `{brms}` / `{rstantools}` have `bayes_R2()` which cites @gelman2019. Classic $R^2$ is $1-\frac{\text{residuals variance}}{\text{data variance}}$. As @gelman2019 point out, there's no one set of residuals, since the model parameters are all distributions rather than point estimates, so they propose an $R^2$ for Bayesian models as $\frac{\text{variance of fitted values}}{\text{variance of fitted values} + \text{variance of residuals}}$, for sampled fitted values and their respective residuals.
+
+*But*, as they say
+
+> A new issue then arises, though, when fitting a set of a models to a single dataset. Now that the denominator of $R^2$ is no longer fixed, we can no longer interpret an increase in $R^2$ as a improved fit to a fixed target.
+
+I'm glad I read the paper!
+
+Anyways, `height_mod` has an $R^2$ of 0, as it should as an intercept only model.
+
+```{r}
+bayes_R2(height_mod)
+```
+
+I had to think for a second about how this made sense, but as an intercept only model, the predicted values for the data will be just a single number, equal to the intercept $\mu$.
+
+```{r}
+predictions(
+  height_mod 
+) |> 
+  posterior_draws() ->
+  height_fitted
+
+height_fitted |> 
+  filter(drawid == "1") |> 
+  slice(1:6) |> 
+  rmarkdown::paged_table()
+```
+
+I computed $R^2$ by hand here. I'm a bit lost why the variance of the residuals is identical for every draw...
+
+```{r}
+height_fitted |> 
+  mutate(resid = height - draw) |> 
+  group_by(drawid) |> 
+  summarise(
+    var_fit = var(draw),
+    var_resid = var(resid)
+  ) |> 
+  mutate(bayesr2 = var_fit/(var_fit+var_resid)) |> 
+  slice(1:6) |> 
+  rmarkdown::paged_table()
+```
+
+The $R^2$ for the height\~weight model is about 0.57
+
+```{r}
+bayes_R2(height_weight_mod)
+```
+
+Let's try calculating that "by hand" again.
+
+```{r}
+predictions(
+  height_weight_mod
+) |> 
+  posterior_draws() |> 
+  mutate(resid = height - draw) |> 
+  group_by(drawid) |> 
+  summarise(
+    var_fit = var(draw),
+    var_resid = var(resid)
+  ) |> 
+  mutate(bayesr2 = var_fit / (var_fit + var_resid)) |> 
+  mean_qi(bayesr2)
+```
+
+Cool. We can get this all from `bayes_R2()` also.
+
+```{r}
+#| label: fig-bayesr2
+#| fig-cap: "Estimate of Bayesian $R^2$"
+#| crop: true
+bayes_R2(height_weight_mod, summary = F) |> 
+  as_tibble() |> 
+  ggplot(aes(R2))+
+    stat_slab()+
+    scale_y_continuous(
+      expand = expansion(mult = 0)
+    )+
+    xlim(0,1)+
+    labs(
+      x = expression(R^2)
+    )+
+    theme_no_y()
+```
+
+### loo
+
+Ok... Time to understand what `loo()` does, and what elpd means. Doing my best with @vehtari2016
+
+elpd
+
+:   **E**xpected **L**og **P**ointwise Predictive **D**ensity (we lost a "p" somewhere).
+
+Starting with lpd (log pointwise predictive density). So $p(y_i|y)$ is the probability of a data point $y_i$ given the distribution of data $y$. We log it, probably to keep things computable and addition based, and sum it up across every datapoint, $\sum \log p(y_i|y)$. This is apparently equal to $\sum \log \int p(y_i|\theta)p(\theta|y)d\theta$.
+
+-   $p(y_i|\theta)$ = the probability of each data point given the model
+
+-   $p(\theta|y)$ = the probability of the model given the data.
+
+Ok, but $p(y_i | y)$ is derived from probabilities over models that had *seen* $y_i$. $p(y_i|y_{-i})$ is the probability of data point $y_i$ derived from a model that had *not* seen $y_i$, a.k.a. "leave one out". ELPD is the summed up log probabilities across these leave-one-out models.
+
+As best as I can tell, the rest of the paper is just about getting very clever about how to approximate $\sum \log p(y_i|y_{-i})$ without needing to refit the model for each datapoint. It's this cleverness that will sometimes result in a warning about "Pareto k estimates"
+
+So, without any further ado:
+
+```{r}
+loo(height_mod)
+```
+
+So, if the leave-one-out probability of each data point was higher, the elpd_loo value would be closer to 0, aka `exp(0)`= 1.
+
+```{r}
+loo(height_weight_mod)
+```
+
+To compare the two models:
+
+```{r}
+loo_compare(
+  loo(height_mod),
+  loo(height_weight_mod)
+)
+```
+
+So, the height-only model has a worse elpd. And we can be *pretty* sure it's a worse elpd, because dividing it by the standard error of the difference is about -8, which according to the Stan discussion forums is a pretty big difference.
+
+## Wrapping it into a report
+
+Posterior predictive checks of both models show considerable bimodality is not sufficiently captured by either the intercept-only model or the weight model.
+
+```{r}
+#| label: fig-ppcheck-comp
+#| fig-cap: "Posterior predictive checks for the two models"
+#| code-fold: true
+posterior_predict(height_mod) |> 
+  as.data.frame() |> 
+  mutate(.draw = row_number()) |> 
+  slice(1:100) |> 
+  pivot_longer(-.draw) |> 
+  mutate(model = "height ~ 1")->
+  height_pp
+
+posterior_predict(height_weight_mod) |> 
+  as.data.frame() |> 
+  mutate(.draw = row_number()) |> 
+  slice(1:100) |> 
+  pivot_longer(-.draw) |> 
+  mutate(model = "height ~ weight")->
+  height_weight_pp
+  
+height_to_mod |> 
+  mutate(model = NULL)->
+  orig
+
+bind_rows(height_pp, height_weight_pp) |> 
+  ggplot(aes(value))+
+    stat_density(
+      aes(color = "yrep", group = .draw),
+      fill = NA,
+      position = "identity",
+      geom = "line",
+      alpha = 0.1
+    )+
+    stat_density(
+      data = orig,
+      aes(x = height, color = "y"),
+      fill = NA,
+      geom = "line",
+      linewidth = 1
+    )+
+    scale_y_continuous(expand = expansion(mult = 0))+
+    labs(
+      color = NULL
+    )+
+    facet_wrap(~model)+
+    theme_no_y()
+```
+
+```{r}
+#| code-fold: true
+bayes_R2(height_weight_mod, summary = F) |> 
+  as_tibble() |> 
+  mean_hdci(.width = 0.95) ->
+  mod_r2
+```
+
+The intercept-only model necessarily has an $R^2$ of 0. Mean Bayesian $R^2$ for the weight model is `r round(mod_r2$R2, digits =2)` (95% highest density interval of \[`r round(mod_r2$.lower, digits =2)`, `r round(mod_r2$.upper, digits =2)`\]).
+
+@tbl-loo displays model comparisons using Leave-One-Out Expected Log Pointwise Predictive Distribution (ELPD) [@vehtari2016].
+
+```{r}
+#| label: tbl-loo 
+#| tbl-cap: "Leave-One-Out Expected Log Pointwise Predictive Distribution comparsion of the two models. ELPD difference contain the difference from the largest LOO ELPD."
+#| code-fold: true
+loo_compare(
+  loo(height_mod),
+  loo(height_weight_mod)
+) |> 
+  as.data.frame() |> 
+  rownames_to_column() |> 
+  mutate(
+    model = case_when(
+      rowname == "height_mod" ~ "height ~ 1",
+      rowname == "height_weight_mod" ~ "height ~ weight"
+    )
+   ) |> 
+  select(model, elpd_diff, se_diff) |> 
+  mutate(ratio = elpd_diff/se_diff) |> 
+  gt() |> 
+    fmt_number() |> 
+    sub_missing() |> 
+    cols_label(
+      elpd_diff = "ELPD difference",
+      se_diff = "difference SE",
+      ratio  = "diff/se"
+    )
+
+```
+
+## Next time:
+
+Writing up a report on the actual parameters.
