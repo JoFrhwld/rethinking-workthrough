@@ -1,0 +1,353 @@
+---
+title: "Reporting linear model parameters"
+date: 2023-06-15
+order: 11
+format:
+  html: default
+prefer-html: true
+image: final_gt_table.png
+twitter-card:
+  image: final_gt_table.png
+open-graph: 
+  image: final_gt_table.png
+---
+
+::: callout-note
+## Listening
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/7FwBtcecmlpc1sLySPXeGE?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+
+</iframe>
+:::
+
+## Loading
+
+```{r}
+library(tidyverse)
+library(tidybayes)
+library(gt)
+library(gtsummary)
+
+library(brms)
+library(marginaleffects)
+library(broom.mixed)
+
+source(here::here("_defaults.R"))
+```
+
+Table libraries
+
+```{r}
+library(gtsummary)
+library(stargazer)
+```
+
+```{r}
+height_weight_mod <- read_rds(here::here("posts", "2023-06-14_09-reporting", "height_weight_mod.rds"))
+```
+
+## The goal
+
+Try to get estimates from this brms model into a table, or some other kind of format, that I like:
+
+```{r}
+height_weight_mod
+```
+
+## Off-the-shelf table methods
+
+`{gtsummary}` has a `tbl_regression()` function.
+
+```{r}
+height_weight_mod |> 
+  gtsummary::tbl_regression(
+    intercept = T
+  )
+```
+
+It's ok.
+
+I know `{stargazer}` is a package people use for reporting models.
+
+```{r}
+data(penguins, package = "palmerpenguins")
+
+penguin_mod <- lm(bill_length_mm ~ body_mass_g + species, penguins)
+```
+
+```{r}
+#| results: 'asis'
+stargazer::stargazer(penguin_mod, type = "html")
+```
+
+To be quite honest, I'm not a big fan of this giant table of everything & asterisks, and it looks like it's not implemented for brms models anyway.
+
+```{r}
+stargazer::stargazer(height_weight_mod)
+```
+
+Oh well.
+
+## Graphical summary methods
+
+There's a few challenges for visualizing this particular model given that the intercept is on such a different scale from the rest of the parameters.
+
+```{r}
+mcmc_plot(height_weight_mod)
+```
+
+```{r}
+height_weight_mod |> 
+  gather_draws(
+    `b_.*`,
+    sigma,
+    regex = TRUE
+  ) |> 
+  ggplot(aes(.value))+
+    stat_slabinterval(
+      normalize = "panels",
+      point_interval = "mean_hdi"
+    )+
+    facet_wrap(~.variable, scales = "free", ncol = 1)+
+    theme_no_y()
+```
+
+## Custom table
+
+I want a custom `{gt}` table that captures the distributional nature of the posteriors. That'll involve calculating things like the credible intervals "by-hand" (really, using `tidybayes::mean_hdci()` and doing some reshaping before the monster `{gt}` code.
+
+### Getting parameter draws
+
+I'll grab the parameter draws with `gather_draws()`
+
+```{r}
+height_weight_mod |> 
+  gather_draws(
+    `b_.*`,
+    sigma,
+    regex = T 
+  ) -> parameter_draws
+```
+
+### Getting the parameter summaries
+
+I'll get the posterior mean and 95% & 50% hdci right now, which results in a long table.
+
+```{r}
+parameter_draws |> 
+  group_by(.variable) |> 
+  mean_hdci(.value, .width = c(0.95, 0.5)) ->
+  initial_table_long
+
+initial_table_long
+```
+
+### Long to wide
+
+What I have right now is a table like
+
+```         
+| .variable | .lower | .upper | .width |
+| intercept | ...... | ...... |   0.5  |
+| intercept | ...... | ...... |   0.95 | 
+```
+
+What for my final table will be something like
+
+```         
+| .variable | lower_95 | lower_50 | upper_50 | upper_95 |
+| intercept | ........ | ........ | ........ | ........ |
+```
+
+So, getting from here to there will involve some pivoting
+
+```{r}
+initial_table_long |> 
+  pivot_longer(
+    .lower:.upper,
+    names_to = "side",
+    values_to = "side_value"
+  ) |> 
+  unite(
+    col = "side",
+    c(side, .width)
+  ) |> 
+  pivot_wider(
+    names_from = side,
+    values_from = side_value
+  ) |> 
+  relocate(
+    ends_with("_0.5"),
+    .after = .lower_0.95
+  ) |> 
+  select(-.point, -.interval) ->
+  initial_table_wide
+
+initial_table_wide
+```
+
+### Posterior sd
+
+I also want to grab the posterior standard deviation, maybe just cause I'm old fashioned, I'll have to calculate that back with the original posterior draws and then join it onto the table I'm making.
+
+```{r}
+parameter_draws |> 
+  group_by(.variable) |> 
+  summarise(
+    posterior_sd = sd(.value)
+  ) ->
+  posterior_sd
+
+posterior_sd
+```
+
+```{r}
+initial_table_wide |> 
+  left_join(posterior_sd) |> 
+  relocate(
+    posterior_sd,
+    .after = .value
+  ) ->
+  final_report_table
+
+final_report_table
+```
+
+### The `{gt}` code
+
+One last bit of clean up will be to the variable names, and creating a group column so I can separate the intercept and weight parameters from the variance parameter.
+
+```{r}
+final_report_table |> 
+  ungroup() |> 
+  mutate(
+    group = case_when(
+      str_detect(.variable, "b_") ~ "β",
+      .default = "variance"
+    ),
+    .variable = str_remove(.variable, "b_")
+  ) |> 
+  group_by(group) ->
+  for_gt
+
+for_gt |> 
+  gt()->
+  gt_interim_01
+
+gt_interim_01
+```
+
+That's too many decimal places.
+
+```{r}
+gt_interim_01 |> 
+  fmt_number(decimals = 2) ->
+  gt_interim_02
+
+gt_interim_02
+```
+
+Next, I'll add spanners for the credible intervals, and point estimates.
+
+```{r}
+gt_interim_02 |> 
+   tab_spanner(
+    label = "50% HDI",
+    columns = .lower_0.5:.upper_0.5
+  ) |> 
+  tab_spanner(
+    label = "95% HDI",
+    columns = .lower_0.95:.upper_0.95
+  ) |> 
+  tab_spanner(
+    label = "posterior estimates",
+    columns = c(.value, posterior_sd)
+  ) ->
+  gt_interim_03
+
+gt_interim_03
+```
+
+With the spanners in place, we can adjust the actual column labels.
+
+```{r}
+gt_interim_03 |> 
+   cols_label(
+    .variable = md("**parameter**"),
+    .value = md("**mean**"),
+    posterior_sd = md("**sd**"),
+    .lower_0.95:.upper_0.95 ~ ""
+  )->
+  gt_interim_04
+
+gt_interim_04
+```
+
+Now, to add some visual clarity to the credible intervals. I'll fill with `ptol_blue`, (hex code `r ptol_blue`).
+
+```{r}
+gt_interim_04 |> 
+  tab_style(
+    style = cell_fill(
+      color = ptol_blue, 
+      alpha = 0.5
+      ),
+    locations = cells_body(
+      columns = ends_with("_0.5")
+    )
+   ) |> 
+  tab_style(
+    style = cell_fill(
+      color = ptol_blue, 
+      alpha = 0.2
+      ),
+    locations = cells_body(
+      columns = ends_with("_0.95")
+    )
+   )->
+  gt_interim_05
+
+gt_interim_05
+```
+
+For me, the group labels are too visually similar to the names of parameter values, so I'll style those too.
+
+```{r}
+gt_interim_05 |> 
+  tab_style(
+    style = cell_text(
+      style = "italic", 
+      size = "small"
+    ),
+    locations = cells_row_groups()
+  ) ->
+  gt_interim_06
+
+gt_interim_06
+```
+
+Final steps, just adding some header and footer information
+
+```{r}
+gt_interim_06 |> 
+  tab_header(
+    title = "height ~ weight0"
+  ) |> 
+  tab_source_note(
+    source_note = md("**priors:**<br>intercept &tilde; N(178, 20)<br>β &tilde; N(0,10)<br>σ &tilde; U(0,50)")
+  )->
+  final_gt_table
+
+final_gt_table
+```
+
+I'll just save this table as a png to be the post image.
+
+```{r}
+#| eval: false
+gtsave(final_gt_table, filename = "final_gt_table.png")
+```
+
+## Was it worth it?
+
+That was a lot of fuss, but a lot of those steps I might roll into my own functions for an actual paper.
