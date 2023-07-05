@@ -1,0 +1,692 @@
+---
+title: "DAGs part 1"
+date: 2023-07-05
+order: 12
+twitter-card:
+  image: "index_files/figure-html/fig-param2-1.png"
+open-graph:
+  image: "index_files/figure-html/fig-param2-1.png"
+---
+
+::: callout-note
+## Listening
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/0EH8lce65ehgSVbMwTFMnY?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+
+</iframe>
+:::
+
+So, as a linguist, the only Directed Acyclic Graphs I've ever worked with are syntax trees. I don't know if it's embarrassing that I've never really utilized them in my statistical analysis, but I'll start to now!
+
+## Setup
+
+```{r}
+#| code-fold: true
+#| code-summary: setup
+
+library(tidyverse)
+library(tidybayes)
+library(gt)
+library(gtsummary)
+library(patchwork)
+library(ggblend)
+
+library(brms)
+library(marginaleffects)
+
+source(here::here("_defaults.R"))
+knitr::opts_chunk$set(dev = "png", dev.args = list(type = "cairo-png"))
+```
+
+New packages for today.
+
+```{r}
+library(dagitty)
+library(ggdag)
+data(WaffleDivorce, package = "rethinking")
+```
+
+## The WaffleDivorce data
+
+I'll leave the `Location` and `Loc` columns out of the overall summary.
+
+```{r}
+WaffleDivorce |> 
+  select(
+    -Location, -Loc
+  ) |> 
+  gtsummary::tbl_summary()
+```
+
+I'm not sure why everyone likes assigning the full named data frame to a new variable called `d`. It's annoying to type out `W a f f l e D i v o r c e` , but aren't we all using IDEs with tab completion?
+
+Let's look at the variables discussed in the chapter.
+
+```{r}
+#| label: fig-wma-divorce
+#| fig-cap: "The relationship between three variables and divorce rate."
+#| fig-width: 8
+#| fig-height: 4
+#| code-fold: true
+#| code-summary: "plotting code"
+#| crop: true
+WaffleDivorce |> 
+  ggplot(aes(WaffleHouses, Divorce))+
+    geom_point() +
+    stat_smooth(
+      method = lm,
+      color = ptol_blue
+      )+
+    theme(aspect.ratio = 1)->
+  waffledivorce_p
+
+WaffleDivorce |> 
+  ggplot(aes(Marriage, Divorce))+
+    geom_point() +
+    stat_smooth(
+      method = lm,
+      color = ptol_blue
+      )+
+    theme(aspect.ratio = 1) ->
+  marriagedivorce_p
+
+WaffleDivorce |> 
+  ggplot(aes(MedianAgeMarriage, Divorce))+
+    geom_point() +
+    stat_smooth(
+      method = lm,
+      color = ptol_blue
+      )+
+    theme(aspect.ratio = 1) ->
+  agedivorce_p
+
+waffledivorce_p + marriagedivorce_p + agedivorce_p
+
+```
+
+## The DAG
+
+The book mostly focuses on the effect of median age at marriage, the marriage rate, and divorce rate, which you can represent as DAG like so:
+
+```{r}
+#| label: fig-dag1
+#| fig-cap: "DAG attempt 1"
+dagify(
+  divorce ~ age,
+  divorce ~ marriage,
+  marriage ~ age
+) |> 
+  ggdag(
+    text_col = ptol_red
+  )+
+    theme_void()+
+    theme(
+      aspect.ratio = 1
+    )
+```
+
+Not quite happy with this first attempt. Looks like I'll *really* have to use these single character labels, which I'm not the biggest fan of, to make them fit inside the nodes. Looks like I might also need to do more by-hand adjustment of both the coordinates of each node, and also the aesthetics of the plot.
+
+```{r}
+#| label: fig-dag2
+#| fig-cap: "DAG attempt 2"
+#| crop: true
+#| fig-width: 4
+#| fig-height: 4
+dagify(
+  D ~ A,
+  D ~ M,
+  M ~ A,
+  outcome = "D",
+  exposure = "A",
+  coords = 
+    tribble(
+      ~name, ~x, ~y,
+      "D", 0, 0,
+      "A", -1, 0,
+      ## UGH
+      "M", -0.5, -sqrt(1-(0.5^2))
+    )
+) ->
+  dam_dag
+
+dam_dag |> 
+  tidy_dagitty() |> 
+  ggplot(aes(x =x, y = y, xend = xend, yend = yend)) +
+    geom_dag_point(
+     color = "grey"
+    )+
+    geom_dag_text(
+      color = ptol_blue
+    )+
+    geom_dag_edges()+
+    theme_dag()+
+    coord_fixed()
+```
+
+Well, I'm a little annoyed at how manual getting the layout to be exactly like I wanted was, but OK.
+
+### Adding in Waffle Houses
+
+Let's figure out how to get the number of Waffle Houses into the DAG. I'll say there's a latent variable R for Region
+
+```{r}
+#| fig-width: 6
+#| fig-height: 5
+dagify(
+  D ~ A,
+  D ~ M,
+  M ~ A,
+  W ~ R,
+  A ~ R,
+  M ~ R,
+  outcome = "D",
+  exposure = c("M", "A"),
+  latent = "R",
+  coords = 
+    tribble(
+      ~name, ~x, ~y,
+      "D", 0, 0,
+      "A", -1, 0,
+      ## UGH
+      "M", -0.5, -sqrt(1-(0.5^2)),
+      "R", -1.5, -sqrt(1-(0.5^2)),
+      "W", -2, 0
+    )
+) ->
+  wrdam_dag
+
+wrdam_dag |> 
+ tidy_dagitty() |> 
+  ggplot(aes(x =x, y = y, xend = xend, yend = yend)) +
+    geom_dag_point(
+     aes(
+       color = name == "R"
+     )
+    )+
+    geom_dag_text(
+      #color = ptol_blue
+    )+
+    geom_dag_edges() +
+    coord_fixed() +
+    theme_dag()+
+    theme(
+      legend.position = "none"
+    )
+  
+  
+```
+
+Ok, well, we'll see how intense I ever get about making these DAG figures.
+
+## Doing the Full Luxury Bayes
+
+First, prepping for modelling by standardizing all of the variables.
+
+```{r}
+WaffleDivorce |> 
+  mutate(
+    divorce_z = (Divorce - mean(Divorce))/sd(Divorce),
+    age_z = (MedianAgeMarriage-mean(MedianAgeMarriage))/sd(MedianAgeMarriage),
+    marriage_z = (Marriage - mean(Marriage))/sd(Marriage)
+  )->
+  waffle_to_model
+```
+
+To figure out the model we need to get the "direct effect" of marriage rate on divorce rate, we can use `dagitty::adjustmentSets()`.
+
+```{r}
+dam_dag |> 
+  adjustmentSets(
+    outcome = "D",
+    exposure = "M"
+  )
+```
+
+So, we need to include median marriage age in the model.
+
+For the "full luxury Bayes" approach, I'll combine brms formulas to model both the divorce rate and the marriage rate in one go.
+
+```{r}
+waffle_formula <-   bf(
+    divorce_z ~ age_z + marriage_z
+  )+
+  bf(
+    marriage_z ~ age_z
+  )+
+  # not 100% sure this is right
+  set_rescor(F)
+```
+
+Let's look at the default priors. I'm, trying out some more stuff with `{gt}` here to get a table I like, but it takes up a lot of space so I'm collapsing it. I also need to figure out what kind of behavior makes sense to me for table captions created by quarto and table titles created by `{gt}`.
+
+```{r}
+#| label: tbl-prior1
+#| tbl-cap: "Default priors"
+#| code-fold: true
+#| code-summary: "table code"
+get_prior(
+  waffle_formula,
+  data = waffle_to_model
+) |> 
+  as_tibble() |> 
+  select(
+    prior,
+    class,
+    coef,
+    resp
+  ) |> 
+  group_by(class) |> 
+  filter(
+    str_length(resp) > 0
+  ) |> 
+  filter(
+    !(class == "b" & coef == "")
+  ) |> 
+  gt(
+    rowname_col = "prior"
+  ) |> 
+    sub_values(
+      columns = prior,
+      values = "",
+      replacement = "flat"
+    ) |> 
+    tab_stub_indent(
+      rows = everything(),
+      indent = 2
+    ) |> 
+  tab_header(
+    title = md("Default `brms` priors")
+  )
+```
+
+So, a thing that hadn't really clicked with me until I was teaching from Bodo Winter's textbook is that if you z-score both the outcome and the predictors in a model, the resulting slopes are Pearson's r, which is always going to be $-1 \le \rho \le 1$. Not that we really have to stress it with this particular data and model, efficiencywise, but we can set a prior on these slopes with a relatively narrow scale, and it'll be pretty reasonable. Here's a normal(0, 0.5) and a student_t(3, 0, 0.5) for comparison.
+
+```{r}
+#| label: fig-prior-comparison
+#| fig-width: 8
+#| fig-cap: "Comparison of a normal and t distribution"
+#| code-fold: true
+#| code-summary: "plotting code"
+#| crop: true
+tibble(
+  x = seq(-1.5, 1.5, length = 500),
+  dens = dnorm(x, sd = 0.5),
+  prior = "normal(0, 0.5)"
+) |> 
+  bind_rows(
+    tibble(
+      x = seq(-1.5, 1.5, length = 500),
+      dens = dstudent_t(x, df = 3, sigma = 0.5),
+      prior = "student_t(3, 0, 0.5)"
+    )
+  ) |> 
+  ggplot(
+    aes(x = x, y = dens)
+  )+
+  list(
+    geom_area(
+      aes(fill = prior),
+      position = "identity",
+      #alpha = 0.6,
+      color = "black"
+    ) |>  blend("multiply"),
+    geom_vline(
+      xintercept = c(-1, 1),
+      linewidth = 1,
+      color = "grey40"
+    )) |> 
+    blend("screen")+ 
+    khroma::scale_fill_bright(
+      limits = c( 
+        "student_t(3, 0, 0.5)",
+         "normal(0, 0.5)"
+      )
+    )+
+    labs(
+      x = NULL
+    ) +
+    scale_y_continuous(
+      expand = expansion(mult = 0.01)
+    ) +
+    theme_no_y()
+```
+
+I'll use the slightly broader t distribution for the slope priors.
+
+```{r}
+slope_priors <- prior(
+  student_t(3, 0, 0.5),
+  class = b
+)
+```
+
+Now for fitting the whole thing.
+
+```{r}
+brm(
+  formula = waffle_formula,
+  prior = slope_priors,
+  data = waffle_to_model,
+  backend = "cmdstanr",
+  file = "dam.rds",
+  cores = 4
+)->
+  full_model
+```
+
+```{r}
+full_model
+```
+
+## Marginalizing
+
+So, to "marginalize" over age, to get the direct effect of the marriage rate, I'd like to use the `marginaleffects::slopes()` function, but I think we've got a slight issue.
+
+```{r}
+slopes(
+  full_model
+) |> 
+  as_tibble() |> 
+  filter(group == "divorcez") |> 
+  count(term)
+```
+
+Because `marriage_z` is also an *outcome* variable, it doesn't want to give me its marginal slopes in the `divorce_z` outcome model. So much for full luxury bayes! But I can work around with `predictions`. I think what I want to use is `grid_typ="counterfactual"` in `datagrid()`.
+
+```{r}
+datagrid(
+  model = full_model,
+  marriage_z = c(0,1),
+  grid_type = "counterfactual"
+) |> 
+  rmarkdown::paged_table()
+```
+
+```{r}
+predictions(
+  full_model,
+  newdata = datagrid(
+    marriage_z = c(0,1),
+    grid_type = "counterfactual"
+  )
+) |> 
+  posterior_draws() |> 
+  filter(group == "divorcez") ->
+  divorce_pred
+
+nrow(divorce_pred)
+```
+
+Ok, this gives us 40,000 values, which is 20,000 for `marriage_z == 0` and 20,000 for `marriage_z == 1`. And given that the original data had 50 rows, that's back to the 4,000 posterior samples we got from the model.
+
+```{r}
+head(divorce_pred) |> 
+  rmarkdown::paged_table()
+```
+
+The `draw` column has the posterior draw, so what I want to do is pivot wider so there's a column for `marriage_z==0` and `marriage_z==1`, then subtract one from the other. I had some issues figuring out which columns need to get dropped for that to happen cleanly, but the answer is `rowid` and, I think, everything from `estimate` through `conf.high`
+
+```{r}
+divorce_pred |> 
+  select(
+    -rowid,
+    -(estimate:conf.high)
+    ) |> 
+  pivot_wider(
+    names_from = marriage_z,
+    values_from = draw
+  ) |> 
+  mutate(marriage_effect = `1`-`0`) |> 
+  group_by(drawid) |> 
+  summarise(
+    avg_marriage_effect = mean(marriage_effect)
+  ) ->
+  avg_marriage_effect
+```
+
+As it turns out, every estimate of `marriage_effect` was the same within each draw, but this might not've been the case for a model with interactions, say.
+
+```{r}
+#| label: fig-avg-marriage-effect
+#| fig-cap: "Marriage rate direct effect on divorce rate"
+#| code-fold: true
+#| code-summary: "plotting code"
+avg_marriage_effect |> 
+  ggplot(aes(avg_marriage_effect)) +
+  list(
+    stat_halfeye(
+      point_interval = "mean_hdci",
+      fill = ptol_blue,
+      slab_color = "black"
+    ),
+    geom_vline(
+      xintercept = 0,
+      color = "grey40",
+      linewidth = 1
+    )) |> blend("screen")+
+    scale_y_continuous(
+      expand = expansion(mult = 0.02)
+    )+
+    labs(x = "marriage direct effect")+
+    theme_no_y()
+```
+
+I have a sneaking suspicion that for this case, this is identical to the estimate of the slope.
+
+```{r}
+#| label: fig-marriage-slope
+#| fig-cap: "Posterior slope of marriage rate on divorce rate"
+#| code-fold: true
+#| code-summary: "plotting code"
+full_model |> 
+  spread_draws(
+    b_divorcez_marriage_z
+  ) |> 
+  ggplot(aes(b_divorcez_marriage_z)) +
+  list(
+    stat_halfeye(
+      point_interval = "mean_hdci",
+      fill = ptol_blue,
+      slab_color = "black"
+    ),
+    geom_vline(
+      xintercept = 0,
+      color = "grey40",
+      linewidth = 1
+    )) |> blend("screen")+
+    scale_y_continuous(
+      expand = expansion(mult = 0.02)
+    )+
+    theme_no_y()
+```
+
+Lol, well.
+
+## One big plot
+
+Let's make one big plot of all the estimated effects. Not all of the parameters from the model are ones we'll want
+
+```{r}
+full_model |> 
+  get_variables()
+```
+
+I'll grab all the betas and the sigmas.
+
+```{r}
+full_model |> 
+  gather_draws(
+    `b_.*`,
+    `sigma_.*`,
+    regex = T
+  )->
+  all_param_draws
+```
+
+I'll want to facet the plots by whether we're looking at draws for the marriage rate outcome or for the divorce rate outcome, so I'll create some new columns.
+
+```{r}
+all_param_draws |> 
+  mutate(
+    outcome = case_when(
+      str_detect(.variable, "marriagez")~"marriage rate~",
+      str_detect(.variable, "divorcez")~"divorce rate~"
+    ),
+    class = case_when(
+      str_detect(.variable, "b_") ~ "betas",
+      str_detect(.variable, "sigma") ~ "sigmas"
+    )
+  ) -> 
+  all_param_draws
+```
+
+And now I'll want a new cleaned up variable name for plotting.
+
+```{r}
+all_param_draws |> 
+  mutate(
+    param = .variable |> 
+      str_remove("b") |> 
+      str_remove("_divorcez") |> 
+      str_remove("_marriagez") |> 
+      str_remove("^_")
+  )->
+  all_param_draws
+```
+
+```{r}
+#| label: fig-param-plot
+#| fig-cap: "Posterior estimates of model parameters"
+#| code-fold: true
+#| code-summary: "plotting code"
+all_param_draws |> 
+  mutate(
+    param = factor(
+      param,
+      levels = rev(c(
+        "Intercept", 
+        "age_z", 
+        "marriage_z", 
+        "sigma"
+        ))
+    )
+  ) |> 
+  ggplot(aes(.value, param))+
+    stat_halfeye(
+      aes(
+        fill = after_stat(x < 0)
+      ),
+      point_interval = "mean_hdci"
+    )+
+    scale_x_continuous(
+      breaks = c(-1, 0, 1)
+    )+
+    labs(y = NULL,
+         x = NULL)+
+    facet_grid(
+      class ~ outcome, 
+      space = "free",
+      scales = "free"
+    )+
+    theme(
+      legend.position = "none"
+    )
+```
+
+One thing that's maybe less than ideal is that the sigma parameters really aren't on the same kind of scale here. Maybe they should be in a completely different plot, and put together with patchwork?
+
+```{r}
+#| label: fig-param2
+#| fig-cap: "Posterior estimates of model parameters"
+#| code-fold: true
+#| code-summary: "plotting code"
+all_param_draws |> 
+  mutate(
+    param = factor(
+      param,
+      levels = rev(c(
+        "Intercept", 
+        "age_z", 
+        "marriage_z", 
+        "sigma"
+        ))
+    )
+  ) ->
+  param_to_plot
+
+param_to_plot |> 
+  filter(class == "betas") |> 
+  ggplot(aes(.value, param))+
+  list(
+    stat_halfeye(
+      aes(
+        fill = after_stat(x < 0)
+      ),
+      point_interval = "mean_hdci"
+    ),
+    geom_vline(
+      xintercept = 0,
+      color = "grey40",
+      linewidth = 1
+    )
+  ) |> 
+  blend("screen")+
+    #scale_x_continuous(
+    #  breaks = c(-1, 0, 1)
+    #)+
+    labs(y = NULL,
+         x = NULL)+
+    facet_grid(
+      class ~ outcome
+      #space = "free",
+      #scales = "free"
+    )+
+    theme(
+      legend.position = "none"
+    )->
+  betas
+
+param_to_plot |> 
+  filter(class == "sigmas") |> 
+  ggplot(aes(.value, param))+
+    stat_halfeye(
+      aes(
+        fill = after_stat(x < 0)
+      ),
+      point_interval = "mean_hdci"
+    )+
+    geom_vline(
+      xintercept = 0,
+      color = "black",
+      linewidth = 1
+    )+
+    #scale_x_continuous(
+    #  breaks = c(-1, 0, 1)
+    #)+
+    labs(y = NULL,
+         x = NULL)+
+    facet_grid(
+      class ~ outcome, 
+      #space = "free",
+      #scales = "free"
+    )+
+    expand_limits(x = 0)+
+    theme(
+      legend.position = "none",
+      strip.text.x = element_blank()
+    ) -> 
+  sigmas
+
+
+layout <- "
+A
+A
+A
+B
+"
+
+betas + sigmas + plot_layout(design = layout)
+```
+
+Hm, idk.
