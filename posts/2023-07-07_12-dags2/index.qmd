@@ -1,6 +1,9 @@
 ---
 title: "DAGs part 2"
 date: 2023-07-07
+order: 13
+twitter-card: true
+open-graph: true
 ---
 
 ::: callout-note
@@ -660,3 +663,4 @@ dagify(
 ```
 
 Well, they all say to get the direct effect of neocortex percentage on kcal per gram, you need to include mass... Which I can be cool with, I just need to figure out how we're thinking about collinearity now! Maybe the paper [Collinearity isn't a disease that needs curing](Collinearity isn't a disease that needs curing) is a place to start!
+
