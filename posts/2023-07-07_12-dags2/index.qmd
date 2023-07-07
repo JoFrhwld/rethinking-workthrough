@@ -1,0 +1,662 @@
+---
+title: "DAGs part 2"
+date: 2023-07-07
+---
+
+::: callout-note
+## Listening
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/1TfqLAPs4K3s2rJMoCokcS?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+
+</iframe>
+:::
+
+For part 2, I'm going to try working through this step by step like he does in the book.
+
+## Setup
+
+```{r}
+#| code-fold: true
+#| code-summary: "loading libraries and defaults"
+
+library(tidyverse)
+library(tidybayes)
+library(brms)
+library(gt)
+library(gtsummary)
+library(patchwork)
+library(ggblend)
+library(marginaleffects)
+library(dagitty)
+library(ggdag)
+library(ggrepel)
+
+source(here::here("_defaults.R"))
+```
+
+```{r}
+set.seed(2023-7-7)
+```
+
+## The data
+
+We're looking at the `rethinking::milk` data
+
+```{r}
+data(milk, package = "rethinking")
+```
+
+Let's try some summaries. For the categorical data, I'm going to do my own custom summary, but for the numeric columns I'll just use `gtsummary::tbl_summary().`
+
+As it turns out, just like usual when I start trying to finesse things, the code got a little intense.
+
+```{r}
+#| label: tbl-cat
+#| tbl-cap: "Summary of categorical variables"
+#| code-fold: true
+#| code-summary: "Categorical summary"
+milk |> 
+  select(
+    where(
+      ~!is.numeric(.x)
+    )
+  ) |> 
+  pivot_longer(
+    cols = everything(),
+    names_to = "var",
+    values_to = "value"
+  ) |> 
+  summarise(
+    .by = var,
+    total_groups = n_distinct(value),
+    most_common = fct_count(
+      factor(value),
+      sort = T,
+      prop = T
+      ) |> 
+      slice(1)
+  ) |> 
+  unnest(most_common) |> 
+  gt() |> 
+     cols_label(
+       var = "Variable",
+       total_groups = "Total Groups",
+       f = "Most common",
+       n = "Number of most common",
+       p = "Proportion of most common"
+     ) |> 
+  fmt_number(
+    columns = p,
+    decimals = 2
+  )
+```
+
+Comparing the code I wrote for the categorical variables to how straightforward `tbl_summary()` is kind of illustrates how useful these out-of-the-box tools can be.
+
+```{r}
+#| label: tbl-cont
+#| tbl-cap: "Summary of continuous variables"
+milk |> 
+  select(
+    where(is.numeric)
+  ) |> 
+  tbl_summary()
+```
+
+## The initial model
+
+Ok, we're going to model the kilocalories per gram of milk as the outcome, trying to explore whether or not the neocortex percentage is related.
+
+```{r}
+#| label: fig-dataplot
+#| crop: true
+#| fig-cap: "Neorcortex percentage and kcal per gram of milk"
+#| code-fold: true
+#| code-summary: "plotting code"
+milk |> 
+  drop_na() |> 
+  ggplot(
+    aes(
+      neocortex.perc, 
+      kcal.per.g,
+      color = clade,
+      fill = clade
+    )
+  )+
+    geom_point(
+      key_glyph = "rect"
+    )+
+    geom_text_repel(
+      aes(label = species), 
+      size = 3,
+      show.legend = F
+    )+
+    theme(
+      aspect.ratio = 1
+    )
+```
+
+### Preparing the data
+
+I won't look ahead and drop NAs when I standardize to save some space. Looks like we're logging the body mass. I'll just check that distribution real quick.
+
+```{r}
+#| label: fig-mass
+#| fig-cap: "Distribution of mass on a linear vs log scale"
+#| fig-width: 10
+#| fig-height: 4
+milk |> 
+  ggplot(aes(mass))+
+    stat_slab()+
+    geom_rug()+
+    labs(
+      title = "linear scale"
+    )+
+    theme_no_y()->
+  mass_linear
+
+milk |> 
+  ggplot(aes(mass))+
+    stat_slab()+
+    geom_rug()+
+    scale_x_log10()+
+    labs(
+      title = "log scale"
+    )+
+    theme_no_y()->
+  mass_log
+
+mass_linear + mass_log
+```
+
+Yup! Looks like we should log it!
+
+```{r}
+milk |> 
+  drop_na() |> 
+  mutate(
+    kcal_z = (kcal.per.g-mean(kcal.per.g))/sd(kcal.per.g),
+    neoc_z = (neocortex.perc-mean(neocortex.perc))/sd(neocortex.perc),
+    log_mass = log(mass),
+    log_mass_z = (log_mass - mean(log_mass))/sd(log_mass)
+  ) ->
+  milk_to_mod
+```
+
+### Fitting the model
+
+I'll fit models with both the weak priors and the stronger priors. I'm still needing to check what everything is called with `get_prior()` before I can confidently set anything.
+
+```{r}
+get_prior(
+  kcal_z ~ neoc_z,
+  data = milk_to_mod
+)
+```
+
+Ok, should do the trick.
+
+```{r}
+brm(
+  kcal_z ~ neoc_z,
+  data = milk_to_mod,
+  prior = c(
+    prior(normal(0,1), class = b),
+    prior(normal(0,1), class = Intercept),
+    prior(exponential(1), class = sigma) 
+  ),
+  sample_prior = T,
+  file = "neoc_model_weak.rds",
+  cores = 4,
+  backend = "cmdstanr"
+)->
+  neoc_model_weak
+```
+
+```{r}
+brm(
+  kcal_z ~ neoc_z,
+  data = milk_to_mod,
+  prior = c(
+    prior(normal(0,0.5), class = b),
+    prior(normal(0,0.2), class = Intercept),
+    prior(exponential(1), class = sigma) 
+  ),
+  sample_prior = T,
+  file = "neoc_model_strong.rds",
+  cores = 4,
+  backend = "cmdstanr"
+)->
+  neoc_model_strong
+```
+
+### Prior predictive plots
+
+You can set an option in `brm` to only sample the priors for something like this, but instead I just fit whole models to save time. This'll need to be a bit "manual", cause I don't think `marginaleffects::predictions()` has an option to get prior predictions.
+
+```{r}
+prior_draws(neoc_model_weak) |> 
+  mutate(
+    draw = row_number(),
+      priors = "weak"
+  ) |> 
+  rowwise() |> 
+  mutate(
+    pred = list(tibble(
+      neoc_z = seq(-2, 2, length = 50),
+      kcal_z = Intercept + (neoc_z * b)
+    ))
+  ) ->
+  weak_prior_predictive
+```
+
+And then the same thing for the strong priors model.
+
+```{r}
+#| code-fold: true
+#| code-summary: "same as above"
+prior_draws(neoc_model_strong) |> 
+  mutate(
+    draw = row_number(),
+      priors = "strong"
+  ) |> 
+  rowwise() |> 
+  mutate(
+    pred = list(tibble(
+      neoc_z = seq(-2, 2, length = 50),
+      kcal_z = Intercept + (neoc_z * b)
+    ))
+  ) ->
+  strong_prior_predictive
+```
+
+I'll just sample 50 fitted lines for each model.
+
+```{r}
+#| label: fig-prior-pred
+#| crop: true
+#| fig-cap: "prior predictive distributions"
+bind_rows(
+  weak_prior_predictive,
+  strong_prior_predictive
+) |> 
+  group_by(priors) |> 
+  sample_n(50) |> 
+  unnest(pred) |> 
+  ggplot(aes(neoc_z, kcal_z)) +
+    geom_line(
+      aes(group = draw)
+    )+
+    facet_wrap(~priors)+
+    theme(
+      aspect.ratio = 1
+    )
+```
+
+So, the "weaker" priors are "silly" (as McElreath puts it) because for some `noec_z` values, it's predicting `kcal_z` values as extreme as 6. And because I standardized the outcome, that's saying some `kcal_z` values are up to 6 standard deviations from the average. R actually craps out trying to give the cumulative probability!
+
+```{r}
+pnorm(6, mean = 0, sd = 1)
+```
+
+### The Posteriors
+
+Lemme compare the posterior parameter estimates for the two models.
+
+```{r}
+neoc_model_weak |> 
+  gather_draws(
+    `b_.*`,
+    regex = T
+  ) |> 
+  mutate(priors = "weak") ->
+  weak_betas
+
+neoc_model_strong |> 
+  gather_draws(
+    `b_.*`,
+    regex = T
+  ) |> 
+  mutate(priors = "strong") -> 
+  strong_betas
+```
+
+```{r}
+#| fig-width: 8
+#| fig-height: 4
+#| label: fig-posterior-comp
+#| fig-cap: "parameter estimates by model"
+bind_rows(
+  weak_betas,
+  strong_betas
+) |> 
+  ggplot(aes(.value, priors))+
+    stat_halfeye()+
+    facet_wrap(~.variable)
+```
+
+The posterior distribution for the Intercept might be notably different, but they're still pretty comparable.
+
+Let's see the predicted values.
+
+```{r}
+#| crop: true
+#| label: fig-neoc-pred
+#| fig-cap: "Posterior estimates of kcal_z"
+#| code-fold: true
+#| code-summary: "plotting code"
+predictions(
+  neoc_model_strong,
+  newdata = datagrid(
+    neoc_z = seq(-2, 2, length = 50)
+  )
+) |> 
+  posterior_draws() ->
+  neoc_fit1
+
+neoc_fit1 |> 
+  ggplot(aes(neoc_z, draw))+
+    stat_lineribbon(
+      .width = c(
+        0.89,
+        0.7,
+        0.5
+      )
+    )+
+    scale_fill_brewer()+
+    labs(
+      title = "kcal ~ neocortex",
+      y = "kcal_z"
+    )+
+    theme(
+      aspect.ratio = 1
+    )
+```
+
+## More Models
+
+Ok, we're also going to fit modes for
+
+-   kcal_z \~ log_mass_z
+
+-   kcal_z \~ neoc_z + log_mass_z
+
+```{r}
+brm(
+  kcal_z ~ log_mass_z,
+  data = milk_to_mod,
+  prior = c(
+    prior(normal(0,0.5), class = b),
+    prior(normal(0,0.2), class = Intercept),
+    prior(exponential(1), class = sigma) 
+  ),
+  sample_prior = T,
+  file = "mass_model.rds",
+  cores = 4,
+  backend = "cmdstanr"
+)->
+  mass_model
+```
+
+```{r}
+brm(
+  kcal_z ~ neoc_z + log_mass_z,
+  data = milk_to_mod,
+  prior = c(
+    prior(normal(0,0.5), class = b),
+    prior(normal(0,0.2), class = Intercept),
+    prior(exponential(1), class = sigma) 
+  ),
+  sample_prior = T,
+  file = "neoc_mass_model.rds",
+  cores = 4,
+  backend = "cmdstanr"
+)->
+  neoc_mass_model
+```
+
+We can compare the parameters from each with some reused code from above!
+
+```{r}
+#| code-fold: true
+#| code-summary: "posterior getting"
+mass_model |> 
+  gather_draws(
+    `b_.*`,
+    regex = T
+  ) |> 
+  mutate(model = "~mass") -> 
+  mass_betas
+
+neoc_mass_model |> 
+  gather_draws(
+    `b_.*`,
+    regex = T
+  ) |> 
+  mutate(model = "~neoc+mass") -> 
+  neoc_mass_betas
+
+strong_betas |> 
+  mutate(model = "~neoc") ->
+  neoc_betas
+```
+
+```{r}
+#| label: fig-all-param
+#| fig-cap: "Comparison of parameters across models"
+#| crop: true
+#| fig-width: 10
+#| fig-height: 4
+#| code-fold: true
+#| code-summary: "plotting code"
+bind_rows(
+  neoc_betas,
+  mass_betas,
+  neoc_mass_betas
+) |> 
+  ggplot(aes(.value, model))+
+    stat_halfeye(
+      aes(fill = after_stat(x >= 0)),
+      show.legend = F
+    )+
+    facet_wrap(~.variable)+
+    theme(
+      aspect.ratio = 0.75
+    )
+```
+
+So, including *both* predictors in the model amplified the effect for both of them. We can get the fitted values now
+
+```{r}
+#| label: fig-noec-comp
+#| fig-cap: "comparison of predicted values across neocortex percentage"
+#| crop: true
+#| code-fold: true
+
+predictions(
+  neoc_mass_model,
+  newdata = datagrid(
+    neoc_z = seq(-2, 2, length = 50),
+    log_mass_z = 0
+  )
+) |> 
+  posterior_draws() |>  
+  mutate(model = "~neoc + mass")-> 
+  neoc_fit2
+
+neoc_fit1 |> 
+  mutate(model = "~neoc")->
+  neoc_fit1
+
+bind_rows(
+  neoc_fit1,
+  neoc_fit2
+) |> 
+  ggplot(aes(neoc_z, draw))+
+    stat_lineribbon(
+      .width = c(0.89,0.7, 0.5),
+      color = NA
+    )  +
+    scale_fill_brewer()+
+   labs(
+     y = "kcal_z",
+     subtitle = "log_mass_z = 0"
+   )+
+   facet_wrap(~model)+
+   theme(
+     aspect.ratio = 1
+   )
+```
+
+```{r}
+#| label: fig-mass-comp
+#| fig-cap: "comparison of predicted values across bodymass"
+#| crop: true
+#| code-fold: true
+predictions(
+  mass_model,
+  newdata = datagrid(
+    log_mass_z = seq(-2, 2, length = 50),
+    neoc_z = 0
+  )
+) |> 
+  posterior_draws() |> 
+  mutate(model = "~mass")->
+  mass_fit1
+
+predictions(
+  neoc_mass_model,
+  newdata = datagrid(
+    log_mass_z = seq(-2, 2, length = 50),
+    neoc_z = 0
+  )
+) |> 
+  posterior_draws() |> 
+  mutate(model = "~neoc + mass")->
+  mass_fit2
+
+bind_rows(
+  mass_fit1,
+  mass_fit2
+) |> 
+  ggplot(aes(log_mass_z, draw))+
+    stat_lineribbon(
+      .width = c(0.89,0.7, 0.5),
+      color = NA
+    )  +
+    scale_fill_brewer()+
+   labs(
+     y = "kcal_z",
+     subtitle = "neoc_z = 0"
+   )+
+   facet_wrap(~model)+
+   theme(
+     aspect.ratio = 1
+   )
+```
+
+## Why?
+
+Each predictor is correlated with the outcome, and also (strongly) correlated with each other.
+
+```{r}
+#| label: fig-pairs
+#| fig-cap: "Relationship between the three variables"
+#| fig-width: 5
+#| fig-height: 5
+#| code-fold: true
+#| crop: true
+milk_to_mod |> 
+  ggplot(aes(log_mass_z, kcal_z))+
+    geom_point()+
+    stat_smooth(
+      method = 'lm',
+      se = F,
+      color = ptol_blue
+    )+
+    scale_x_continuous(position = "top")->
+  mass_kcal
+
+milk_to_mod |> 
+  ggplot(aes(neoc_z, kcal_z))+
+    geom_point()+
+    stat_smooth(
+      method = 'lm',
+      se = F,
+      color = ptol_blue
+    )+
+    scale_x_continuous(position = "top")+
+    scale_y_continuous(position = "right")+
+  theme(
+    aspect.ratio = 1
+  )->
+  neoc_kcal
+
+milk_to_mod |> 
+  ggplot(aes(log_mass_z, neoc_z))+
+    geom_point()+
+    stat_smooth(
+      method = 'lm',
+      se = F,
+      color = ptol_blue
+    )+
+  theme(
+    aspect.ratio = 1
+  )->
+  mass_neoc
+
+layout <- "
+AB
+C#
+"
+
+mass_kcal + neoc_kcal + mass_neoc + plot_layout(design = layout)
+```
+
+### Isn't this collinearity?
+
+So, on this point, I'm not completely sure how I should feel about the model with both body mass and neocortex percentage, since it looks like "collinearity" which is supposed to be 👻 spooky 👻. In the book, he gives three possible DAGs, so I'll see what the "adjustment sets" are like for each.
+
+```{r}
+dagify(
+  kcal ~ mass,
+  kcal ~ neoc,
+  neoc ~ mass
+) |> 
+  adjustmentSets(
+    outcome = "kcal",
+    exposure = "neoc",
+    effect = "direct"
+    )
+```
+
+```{r}
+dagify(
+  kcal ~ mass,
+  kcal ~ neoc,
+  # flipping this
+  mass ~ neoc
+) |> 
+  adjustmentSets(
+    outcome = "kcal",
+    exposure = "neoc",
+    effect = "direct"
+  )
+```
+
+```{r}
+dagify(
+  kcal ~ mass,
+  kcal ~ neoc,
+  mass ~ UNK,
+  neoc ~ UNK,
+  latent = "UNK"
+) |> 
+  adjustmentSets(
+    outcome = "kcal",
+    exposure = "neoc",
+    effect = "direct"
+  ) 
+```
+
+Well, they all say to get the direct effect of neocortex percentage on kcal per gram, you need to include mass... Which I can be cool with, I just need to figure out how we're thinking about collinearity now! Maybe the paper [Collinearity isn't a disease that needs curing](Collinearity isn't a disease that needs curing) is a place to start!
