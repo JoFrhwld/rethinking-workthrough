@@ -1,0 +1,281 @@
+---
+title: "DAGS part 3"
+order: 14
+date: 2023-07-13
+twitter-card: true
+open-graph: true
+---
+
+::: callout-note
+## Listening
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/5ZmhfMG9rPl7GMTHUOi3Wq?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+
+</iframe>
+:::
+
+## Setup
+
+```{r}
+#| code-fold: true
+library(tidyverse)
+library(tidybayes)
+library(brms)
+library(gt)
+library(gtsummary)
+library(patchwork)
+library(ggblend)
+library(marginaleffects)
+library(dagitty)
+library(ggdag)
+
+source(here::here("_defaults.r"))
+```
+
+```{r}
+set.seed(2023-7-12)
+```
+
+## The Getting Total Expected Effects
+
+Ok, for the milk data, where the neocortex percentage is correlated with bodymass, how would we get the expected effect of increasing body mass?
+
+```{r}
+data(milk, package = "rethinking")
+```
+
+```{r}
+milk |> 
+  drop_na() |> 
+  mutate(
+    kcal_z = (kcal.per.g-mean(kcal.per.g))/sd(kcal.per.g),
+    neoc_z = (neocortex.perc-mean(neocortex.perc))/sd(neocortex.perc),
+    log_mass = log(mass),
+    log_mass_z = (log_mass - mean(log_mass))/sd(log_mass)
+  ) ->
+  milk_to_mod
+```
+
+We'll have to commit to a DAG, so I'll go with this:
+
+```{mermaid}
+flowchart LR
+  Mass --> Neocortex
+  Mass --> KCal
+  Neocortex --> KCal
+```
+
+::: {.callout-note collapse="true"}
+## The DAG in Mermaid
+
+Making the DAG in Mermaid was so much nicer!
+
+```         
+flowchart LR
+  Mass --> Neocortex
+  Mass --> KCal
+  Neocortex --> KCal
+```
+:::
+
+So I'll use this formula:
+
+```{r}
+mnk_formula <- bf(
+  kcal_z ~ log_mass_z + neoc_z
+) +
+bf(
+  neoc_z ~ log_mass_z
+) +
+set_rescor(FALSE)
+```
+
+I'm still just superstitiously using `set_rescor()`, since I don't really understand where it's supposed to be used or not, but everyone seems to include it in these things.
+
+### Fitting the model.
+
+```{r}
+brm(
+  formula = mnk_formula,
+  prior = c(
+    prior(normal(0,0.5), class = b, resp = kcalz),
+    prior(normal(0,0.5), class = b, resp = neocz),    
+    prior(normal(0,0.2), class = Intercept, resp = kcalz),
+    prior(normal(0,0.2), class = Intercept, resp = neocz),    
+    prior(exponential(1), class = sigma, resp = kcalz),
+    prior(exponential(1), class = sigma, resp = neocz) 
+  ),
+  data = milk_to_mod,
+  cores = 4,
+  file = "mnk_model.rds",
+  backend = "cmdstanr"
+)->
+  mnk_model
+```
+
+```{r}
+mnk_model
+```
+
+### Getting the total effect of bodymass 
+
+I *think* to work out the total effect of increasing body mass, I need to get the estimated neocortex size for each body mass, and then use *that* to get the estimated caloric value?
+
+I *also* don't think the out-of-the-box functions like `marginaleffects::predictions()` or `tidybayes::add_epred_draws()` will do the trick either? We'll have to get analog.
+
+#### Step 1: Get all of the parameters
+
+```{r}
+mnk_model |> 
+  spread_draws(
+    `b_.*`,
+    regex = T
+  )->
+  mnk_parameters
+
+colnames(mnk_parameters)
+```
+
+#### Step 2: Get the predicted neocortex sizes
+
+Ok, if `log_mass_z` = 0, the expected value of neocortex would just be the Intercept, or `b_neocz_Intercept`. I'll create a column called `pred_neoc_m0` to mean "predicted neocortex percentage when mass = 0". Then, I'll create a column called `pred_neoc_m1` for "predicted neocortex percentage when mass = 1"
+
+```{r}
+mnk_parameters |> 
+  mutate(
+    pred_neoc_m0 = b_neocz_Intercept,
+    pred_neoc_m1 = b_neocz_Intercept + b_neocz_log_mass_z
+  )->
+  mnk_parameters
+```
+
+#### Step 3: Get the predicted kcals
+
+Ok, now to get the predicted kcal when body mass = 0, I'll have to multiply `pred_neoc_mo0` by the neocortex slope for kcal.
+
+```{r}
+mnk_parameters |> 
+  mutate(
+    pred_kcal_m0 = b_kcalz_Intercept + (b_kcalz_neoc_z * pred_neoc_m0)
+  ) ->
+  mnk_parameters
+```
+
+Now to get the predicted kcal when mass = 1, I'll need to multiply the neocortex slope by the predicted neocortex size when mass = 1, and add the body mass slope.
+
+```{r}
+mnk_parameters |> 
+  mutate(
+    pred_kcal_m1 = b_kcalz_Intercept + (b_kcalz_neoc_z + pred_neoc_m1) + b_kcalz_log_mass_z
+  )->
+  mnk_parameters
+```
+
+Now, subtract `pred_kcal_m1` from `pred_kcal_m0` to get the total effect.
+
+```{r}
+mnk_parameters |> 
+  mutate(
+    total_mass_effect = pred_kcal_m1 - pred_kcal_m0
+  ) ->
+  mnk_parameters
+```
+
+#### Step 4: Feel confused and pretty certain that you've done it wrong
+
+Now, I'll compare the total effect vs the direct effect.
+
+```{r}
+#| code-fold: true
+mnk_parameters |> 
+  select(.draw, b_kcalz_log_mass_z, total_mass_effect) |> 
+  pivot_longer(-1) |> 
+  mutate(
+    name = case_match(
+      name,
+      "b_kcalz_log_mass_z" ~ "direct effect",
+      "total_mass_effect" ~ "total effect"
+    )
+  ) |> 
+  ggplot(aes(value, name, fill = name))+
+    stat_halfeye()+
+    labs(
+      fill = "effect",
+      y = NULL,
+      x = NULL,
+      title = "effect of +1 body mass"
+    )+
+    theme(legend.position = "none")
+```
+
+Well, I'm a bit nervous about whether I've done this right, especially since the estimated effect of body mass *without* including neocortex in the model was still on the negative side of 0.
+
+*But*, if we take the DAG seriously, then increasing body mass pretty strongly increases neocortex percentage, and that pretty strongly increases the kcal of the milk... so maybe this is right!
+
+## Categorical Variables
+
+Returning to the height data to include some categorical predictors:
+
+```{r}
+data(Howell1, package = "rethinking")
+
+Howell1 |> 
+  filter(
+    age >= 18
+  ) |> 
+  mutate(
+    sex = case_match(
+      male,
+      0 ~ "female",
+      1 ~ "male",
+    ),
+    weight_z = (weight-mean(weight))/sd(weight)
+  ) ->
+  height_to_model
+```
+
+To use the "indexing" approach, I think we'll need to use the `-1` formula syntax to remove the intercept.
+
+```{r}
+height_formula = bf(
+  height ~ -1 + sex + weight
+)
+```
+
+Let's look at the default priors.
+
+```{r}
+get_prior(
+  height_formula,
+  data = height_to_model
+)
+```
+
+Well, it looks like there's not a very easy way to set one prior over the parameters for `sex` and a different prior for the slope of `weight`. For now I'll just leave the priors at their defaults and see what I get.
+
+```{r}
+brm(
+  height_formula,
+  data = height_to_model,
+  file = "height_model.rds",
+  cores = 4
+) ->
+  height_model
+```
+
+```{r}
+height_model
+```
+
+### ~~Getting Fancier~~
+
+I was going to do some more fancier modelling, looking at the effect of sex on weight, but I think if I was going to draw the DAG out, it would be something like this:
+
+```{mermaid}
+flowchart LR
+  sex --> height
+  height --> weight
+  sex --> weight
+```
+
+If we have to draw an arrow of causality between height and weight, it has to go height $\rightarrow$ weight. Cause taller people necessarily have more mass than shorter people, but people with more mass don't necessarily be taller.
