@@ -662,5 +662,4 @@ dagify(
   ) 
 ```
 
-Well, they all say to get the direct effect of neocortex percentage on kcal per gram, you need to include mass... Which I can be cool with, I just need to figure out how we're thinking about collinearity now! Maybe the paper [Collinearity isn't a disease that needs curing](Collinearity isn't a disease that needs curing) is a place to start!
-
+Well, they all say to get the direct effect of neocortex percentage on kcal per gram, you need to include mass... Which I can be cool with, I just need to figure out how we're thinking about collinearity now! Maybe the paper [Collinearity isn't a disease that needs curing](https://open.lnu.se/index.php/metapsychology/article/view/2548) is a place to start!
