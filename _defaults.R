@@ -14,6 +14,20 @@ theme_no_y <- function(){
   )
 }
 
+theme_blank_y <- function(){
+  theme(
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank()
+  )
+}
+
+theme_blank_x <- function(){
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank()
+  )
+}
+
 
 options(
   ggplot2.discrete.colour = khroma::scale_color_bright,
