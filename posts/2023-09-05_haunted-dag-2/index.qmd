@@ -1,0 +1,759 @@
+---
+title: "Multicollinearity & Post-treatment bias"
+order: 16
+date: 2023-09-05
+twitter-card: true
+open-graph: true
+---
+
+::: callout-note
+## Listening
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/1TfqLAPs4K3s2rJMoCokcS?utm_source=generator" width="100%" height="152" frameBorder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+
+</iframe>
+:::
+
+## Setup
+
+```{r}
+#| code-fold: true
+library(tidyverse)
+library(tidybayes)
+library(brms)
+library(gt)
+library(gtsummary)
+library(patchwork)
+library(ggblend)
+library(ggdensity)
+library(ggforce)
+library(marginaleffects)
+library(dagitty)
+library(ggdag)
+library(GGally)
+
+
+source(here::here("_defaults.r"))
+```
+
+```{r}
+set.seed(2023-9-5)
+```
+
+## What to (not) do
+
+Here's what McElreath says about multicollinearity
+
+> Some fields actually teach students to inspect pairwise correlations before fitting a model, to identify and drop highly correlated predictors. **This is a mistake.** Pairwise correlations are not the problem. It is the conditional associations---not correlations---that matter. (*emphasis added*)
+
+## A real multicollinear example
+
+A real multicollinear example involves the percent fat and lactose in primate's milk when used to predict the kcal.
+
+```{r}
+data(milk, package = "rethinking")
+```
+
+```{r}
+#| filename: "preparing data"
+milk |> 
+  drop_na(
+    kcal.per.g, 
+    perc.fat, 
+    perc.lactose
+  ) |> 
+  mutate(
+    kcal_z = (kcal.per.g-mean(kcal.per.g))/sd(kcal.per.g),
+    fat_z = (perc.fat - mean(perc.fat))/sd(perc.fat),
+    lactose_z = (perc.lactose - mean(perc.lactose))/sd(perc.lactose)
+  )->
+  milk_to_mod
+```
+
+I wanted to make a pairs plot with `GGally::pairs()`, but something is busted with the axes. I'll have to do it a little by hand.
+
+```{r}
+#| filename: "GGally::pairs() attempt"
+#| label: fig-pairs1
+#| fig-cap: "pairs plot of the primate milk data"
+#| out-width: 80%
+milk_to_mod |> 
+  select(
+    ends_with("_z")
+  ) |> 
+  GGally::ggpairs()
+```
+
+```{r}
+#| code-fold: true
+#| label: fig-pairs2
+#| fig-cap: "Pairs plot"
+#| crop: true
+#| out-width: 80%
+
+milk_to_mod |> 
+  ggplot(aes(lactose_z, kcal_z)) +
+    geom_point()->
+  a
+
+milk_to_mod |> 
+  ggplot(aes(fat_z, kcal_z))+
+    geom_point()+
+    theme_blank_y()->
+  b
+
+milk_to_mod |> 
+  ggplot(aes(lactose_z, fat_z))+
+    geom_point()+
+    theme_blank_x()->
+  c
+
+this_layout <- "
+C#
+AB
+"
+
+a+b+c + plot_layout(design = this_layout)
+  
+```
+
+Ok, now I'll fit models for
+
+```         
+kcal_z ~ lactose_z
+kcal_z ~ fat_z
+kcal_z ~ lactose_z + fat_z
+```
+
+with the same priors from the book.
+
+```{r}
+#| filename: "model priors"
+milk_prior <- c(
+  prior(normal(0, 0.2), class = Intercept),
+  prior(normal(0, 0.5), class = b)
+)
+```
+
+```{r}
+#| filename: "lactose model"
+brm(
+  kcal_z ~ lactose_z,
+  prior = milk_prior,
+  data = milk_to_mod,
+  backend = "cmdstanr",
+  cores = 4,
+  file = "kcal_lact_mod" 
+)->
+  kcal_lact_mod
+```
+
+```{r}
+#| filename: "fat model"
+brm(
+  kcal_z ~ fat_z,
+  prior = milk_prior,
+  data = milk_to_mod,
+  backend = "cmdstanr",
+  cores = 4,
+  file = "kcal_fat_mod" 
+)->
+  kcal_fat_mod
+```
+
+```{r}
+#| filename: "lactose and fat model"
+brm(
+  kcal_z ~ lactose_z + fat_z,
+  prior = milk_prior,
+  data = milk_to_mod,
+  backend = "cmdstanr",
+  cores = 4,
+  file = "kcal_lact_fat_mod" 
+)->
+  kcal_lact_fat_mod
+```
+
+Now to compare the estimates
+
+::: {.callout-note collapse="true"}
+## a function
+
+I should really refactor the code chunk below into its own function, but the nonstandard evaluation of `gather_draws()` is intimidating to me.
+:::
+
+```{r}
+#| filename: "getting all betas"
+list(
+  lact = kcal_lact_mod,
+  fat = kcal_fat_mod,
+  lact_fat = kcal_lact_fat_mod
+) |> 
+  map(
+    ~ .x |> 
+      gather_draws(
+        `b_.*`,
+        regex = T
+      )
+  ) |> 
+  list_rbind(
+    names_to = "model"
+  ) ->
+  all_milk_params
+```
+
+We only want to look at the non-intercept parameters.
+
+```{r}
+#| filename: "dropping intercepts"
+all_milk_params |> 
+  filter(
+    str_detect(
+      .variable, 
+      "Intercept", 
+      negate = T
+    )
+  ) ->
+  milk_betas
+```
+
+```{r}
+#| code-fold: true
+#| label: fig-milk-param
+#| fig-cap: "Parameter comparison"
+#| crop: true
+#| out-width: 80%
+milk_betas |> 
+  mutate(
+    model = str_c(
+      "~", 
+      model
+    ) |> 
+      str_replace(
+        "_",
+        "+"
+      )
+  ) |> 
+  ggplot(
+    aes(
+      .value,
+      .variable,
+      color = model
+    )
+  )+
+    geom_vline(
+      xintercept = 0
+    )+
+    stat_pointinterval(
+      position = position_dodge(width = 0.2)
+    )
+```
+
+So, in each separate model, lactose and fat have larger magnitudes than in the model with both.
+
+Lets grab the correlation of the parameters in the full model.
+
+```{r}
+#| filename: "getting parameter correlation."
+all_milk_params |> 
+  filter(
+    model == "lact_fat"
+  ) |> 
+  pivot_wider(
+    names_from = .variable,
+    values_from = .value
+  ) |> 
+  select(
+    starts_with("b_")
+  ) |> 
+  cor() ->
+  milk_param_cor
+
+milk_param_cor
+```
+
+For fun, let's make this cleaner for `gt`
+
+```{r}
+#| code-fold: true
+#| label: tbl-param-cor
+#| tbl-cap: "Parameter posterior correlation"
+milk_param_cor[
+  upper.tri(milk_param_cor, diag = T)
+] <- NA
+
+milk_param_cor |> 
+  as_tibble(rownames = "param") |> 
+  slice(-1) |> 
+  select(-b_fat_z) |> 
+  gt() |> 
+  sub_missing() |> 
+  fmt_number() |> 
+  cols_label(
+    param = ""
+  ) 
+```
+
+Notably, the correlation of the `b_fat_z` and the `b_lactose_z` parameters ≠ the correlation of the data.
+
+```{r}
+(milk_to_mod |> 
+  select(
+    lactose_z,
+    fat_z
+  ) |> 
+  cor())[1,2]
+```
+
+Here's a visual comparison of the original data versus the posterior estimates for the effect of the variables.
+
+```{r}
+#| code-fold: true
+#| label: fig-data-v-post
+#| fig-cap: "Data vs Posterior parameters"
+#| crop: true
+#| out-width: 80%
+milk_to_mod |> 
+  ggplot(
+    aes(
+      lactose_z,
+      fat_z
+    )
+  )+
+    geom_point()+
+    labs(
+      title = "data"
+    )->
+  data_cor
+
+all_milk_params |> 
+  filter(
+    model == "lact_fat"
+  ) |> 
+  pivot_wider(
+    names_from = .variable,
+    values_from = .value
+  ) |> 
+  ggplot(
+    aes(
+      b_lactose_z, 
+      b_fat_z
+    )
+  )+
+    stat_hdr_points()+
+    guides(
+      color = "none"
+    ) +
+    labs(title = "posterior")->
+  posterior_cor
+
+data_cor + posterior_cor
+  
+```
+
+McElreath says one thing to do is compare the posterior to the prior. Very similar posteriors and priors could indicate identifiability problems.
+
+```{r}
+#| code-fold: true
+#| crop: true
+#| label: fig-prior-post
+#| fig-cap: "Prior/Posterior comparison"
+#| out-width: 80%
+all_milk_params |> 
+  filter(
+    model == "lact_fat",
+    .variable %in% c("b_lactose_z", "b_fat_z")
+  ) |> 
+  ggplot(
+    aes(
+      .value
+    )
+  )+
+  stat_density(
+    aes(
+      color="posterior"
+    ),
+    geom = "line"
+  )+
+  stat_function(
+    fun = dnorm,
+    args = list(
+      mean = 0,
+      sd = 0.5
+    ),
+    aes(
+      color = "prior"
+    )
+  ) +
+  facet_wrap(
+    ~.variable
+  )+
+  xlim(
+    0.5 * -3,
+    0.5 * 3
+  )+
+  labs(
+    color = NULL,
+    x = NULL
+  )+
+  theme_no_y()+
+  theme(
+    aspect.ratio = 0.8
+  )
+```
+
+## Post-treatment bias
+
+Making this work is going to involve both wrapping my mind around a post-treatment bias, and figuring out how to set a lognormal prior or family in brms.
+
+The hypothetical situation: You're testing different antifungal soils on plant growth, and you're measuring their height, and the presence/absence of fungus. The chronological process is something like:
+
+```{mermaid}
+flowchart LR
+  a[measure sprouts]
+  b(treat soil)
+  a --> b
+  c[measure plants]
+  d[record fungus]
+  b --> c
+  b --> d
+```
+
+The causal process might be something like
+
+```{mermaid}
+graph LR
+  h0[initial height]
+  h1[second height]
+  f[fungus]
+  t[treatment]
+  
+  h0 --> h1
+  f --> h1
+  t --> f
+```
+
+This makes it much clearer now! "Post treatment" meaning "a variable that sits between the treatment and the outcome."
+
+```{r}
+#| filename: "fungus simulation"
+n = 100
+tibble(
+  plant_id = 1:n,
+  treatment = plant_id %% 2,
+  h0 = rnorm(n, 10, 2),
+  fungus = rbinom(
+    100,
+    size = 1,
+    prob = 0.5 - treatment * 0.4
+  ),
+  h1 = h0 + 
+    rnorm(
+      n, 
+      mean = 5 - 3 * fungus
+    )
+)->
+  fungus_sim
+```
+
+```{r}
+#| layout-ncol: 2
+#| crop: true
+#| code-fold: true
+#| label: fig-fungus-comp
+#| fig-cap: "plant hight, comparing treatment vs fungus effects"
+fungus_sim |> 
+  ggplot(
+    aes(
+      h0,
+      h1,
+      color = factor(treatment)
+    )
+  )+
+    geom_point()+
+    geom_abline(color = "grey60")+
+    labs(
+      color = "treatment"
+    )+
+  theme(
+    legend.position = "top",
+    aspect.ratio = NULL
+  )+
+  coord_fixed()->
+  fungus1
+
+fungus_sim |> 
+  ggplot(
+    aes(
+      h0,
+      h1,
+      color = factor(fungus)
+    )
+  )+
+    geom_point()+
+    geom_abline(color = "grey60")+
+    labs(
+      color = "fungus"
+    )+
+    scale_color_brewer(
+      palette = "Dark2"
+    )+
+  theme(
+    legend.position = "top",
+    aspect.ratio = NULL
+  )+
+  coord_fixed()->
+  fungus2
+
+fungus1 + fungus2
+```
+
+### Fitting the model
+
+The way the book fits the model is to use a multiplier on `h0`. To get this to work in `brm()` , I think I need to use its [non-linear modelling](https://cran.r-project.org/web/packages/brms/vignettes/brms_nonlinear.html) capacity.
+
+First, we fit just an across-the-board model, without including treatment or fungus
+
+```{r}
+#| filename: "growth only model"
+brm(
+  bf(
+    h1 ~ h0 * p,
+    p ~ 1,
+    nl = T
+  ),
+  prior = c(
+    prior(lognormal(0, 0.25), coef = Intercept, nlpar = p)
+  ),
+  data = fungus_sim,
+  backend = "cmdstanr",
+  file = "fungus1"
+)->
+  fungus1_mod
+```
+
+```{r}
+#| filename: "getting growth estimate"
+fungus1_mod |> 
+  gather_draws(
+    `b_.*`,
+    regex = T
+  ) -> fungus1_params
+```
+
+```{r}
+#| code-fold: true
+#| label: fig-growth-param
+#| fig-cap: "Estimated growth-only model"
+#| crop: true
+#| out-width: 80%
+fungus1_params |> 
+  ggplot(
+    aes(
+      .value, 
+      .variable
+    )
+  )+
+    stat_halfeye()
+```
+
+This is, thankfully, very similar to what the posterior from the book was! So maybe I did it right. Let's grab the maximum likelihood estimate from the simulated data.
+
+```{r}
+#| filename: "data summary stats"
+#| label: tbl-makl
+#| tbl-cap: "Summary stats of the growth data."
+fungus_sim |> 
+  mutate(
+    p = h1/h0
+  ) |> 
+  reframe(
+    stat = c("median", "mean", "logmean"),
+    value = c(
+      median(p),
+      mean(p),
+      exp(mean(log(p)))
+    )
+  ) |> 
+  gt() |> 
+  fmt_number()
+```
+
+### Including both predictors
+
+Now we'll do the "bad" thing and include both predictors. The book keeps the lognormal prior on the *intercept* of the multiplier, but just a normal prior on the treatment and fungus effects.
+
+```{r}
+#| filename: "fungus + treatment model"
+brm(
+  bf(
+    h1 ~ h0 * p,
+    p ~ treatment + fungus,
+    nl = T
+  ),
+  prior = c(
+    prior(lognormal(0, 0.2), coef = Intercept, nlpar = p),
+    prior(normal(0, 0.5), coef = treatment, nlpar = p),
+    prior(normal(0, 0.5), coef = fungus, nlpar = p)
+  ),
+  data = fungus_sim,
+  backend = "cmdstanr",
+  file = "fungus2"
+)->
+  fungus2_mod
+```
+
+```{r}
+#| filename: "getting parameters"
+fungus2_mod |> 
+  gather_draws(
+    `b_.*`,
+    regex = T
+  )->
+  fungus2_param
+```
+
+```{r}
+#| code-fold: true
+#| crop: true
+fungus2_param |> 
+  mutate(
+    .variable = .variable |> 
+      as.factor() |> 
+      fct_relevel(
+      "b_p_Intercept",
+      after = Inf
+    )
+  ) |> 
+  ggplot(
+    aes(
+      .value,
+      .variable
+    )
+  )+
+    geom_vline(xintercept = 0)+
+    stat_halfeye()
+```
+
+Ok, so just like the book
+
+1.  The multiplier intercept got bigger (since it's the growth for treatment=0, fungus=0).
+2.  We've got a negative effect of fungus.
+3.  We've got a weak or 0 effect of treatment.
+
+The non-effect of treatment makes sense, since the effect of treatment is conditional on the effect of the fungus, and the presence/absence of fungus is itself an outcome of the treatment.
+
+But, this doesn't mean the treatment didn't work. There are a lot more plants without fungus in the treatment condition than the non-treatment.
+
+```{r}
+#| filename: "treatment by fungus"
+#| label: tbl-treatment-fungus
+#| tbl-cap: "Treatment by Fungus"
+fungus_sim |> 
+  count(
+    treatment, fungus
+  ) |> 
+  pivot_wider(
+    names_from = fungus,
+    values_from = n
+  ) |> 
+  gt() |> 
+  tab_spanner(
+    columns = 2:3,
+    label = "fungus"
+  )
+```
+
+### Treatment only
+
+Let's fit one more model, leaving out fungus.
+
+```{r}
+#| filename: "treatment only model"
+brm(
+  bf(
+    h1 ~ h0 * p,
+    p ~ treatment,
+    nl = T
+  ),
+  prior = c(
+    prior(lognormal(0, 0.2), coef = Intercept, nlpar = p),
+    prior(normal(0, 0.5), coef = treatment, nlpar = p)
+  ),
+  data = fungus_sim,
+  backend = "cmdstanr",
+  file = "fungus3"
+)->
+  fungus3_mod
+```
+
+```{r}
+#| filename: "getting treatment only params"
+fungus3_mod |> 
+  gather_draws(
+    `b_.*`,
+    regex = T
+  ) ->
+  fungus3_param
+```
+
+```{r}
+#| code-fold: true
+#| crop: true
+#| label: fig-fungus3
+#| fig-cap: "Estimates from treatment only model."
+fungus3_param |> 
+  ggplot(
+    aes(
+      .value, 
+      .variable
+    )
+  )+
+    geom_vline(
+      xintercept = 0
+    ) +
+    stat_halfeye()
+
+```
+
+Now we get a reliable positive effect of treatment.
+
+### Looking at it in a DAG
+
+I'll use the `{ggdag}` and `{dagitty}` packages to build a directed acyclic graph, and then get the "conditional independencies" from it.
+
+The `ggdag::dagify()` function takes a sequence of formulas that translate back and forth between the dags like so:
+
+```         
+# dag
+h0 -> h1
+
+# formula
+h1 ~ h0
+```
+
+```{r}
+#| filename: "making the dag"
+# from {ggdag}
+dagify(
+  h1 ~ h0,
+  h1 ~ fungus,
+  fungus ~ treatment
+)->
+  fungus_dag
+```
+
+```{r}
+#| filename: "getting the independencies"
+impliedConditionalIndependencies(
+  fungus_dag
+)
+```
+
+So, getting these conditional independence statements to look nice is a whole thing, apparently. There's [a unicode character](https://en.wikipedia.org/wiki/Up_tack), ⫫, but in LaTeX the best option is apparently `\perp\!\!\!\perp`, $\perp\!\!\!\perp$.
+
+Anyway, the important statement in there is
+
+$$\text{h}1 \perp\!\!\!\perp \text{treatment}~ |~ \text{fungus}$$
+
+This means that if fungus is included, then `h1` (our outcome) is independent from `treatment`, i.e. including the post-treatment effect in the model will make it seem like there's no effect of the treatment.
