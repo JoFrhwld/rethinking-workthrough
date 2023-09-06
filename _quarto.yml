@@ -32,6 +32,7 @@ format:
     fig-width: 6
     fig-height: 4
     fig-cap-location: margin
+    toc: true
 
 
 knitr:
