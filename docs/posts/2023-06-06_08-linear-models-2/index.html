@@ -116,7 +116,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="twitter:card" content="summary_large_image">
 </head>
 
-<body class="nav-sidebar floating nav-fixed fullcontent">
+<body class="nav-sidebar floating nav-fixed">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -297,6 +297,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">Multicollinearity &amp; Post-treatment bias</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/2023-09-06_haunted-dag-3/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Colliders</span></a>
+  </div>
+</li>
       </ul>
   </li>
     </ul>
@@ -304,7 +310,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </nav>
 <div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#loading" id="toc-loading" class="nav-link active" data-scroll-target="#loading">Loading</a></li>
+  <li><a href="#finessing-the-model-diagram" id="toc-finessing-the-model-diagram" class="nav-link" data-scroll-target="#finessing-the-model-diagram">Finessing the model diagram</a></li>
+  <li><a href="#height-data" id="toc-height-data" class="nav-link" data-scroll-target="#height-data">Height data</a>
+  <ul class="collapse">
+  <li><a href="#aside-experimenting-with-marginaleffects" id="toc-aside-experimenting-with-marginaleffects" class="nav-link" data-scroll-target="#aside-experimenting-with-marginaleffects">Aside, experimenting with <code>{marginaleffects}</code></a></li>
+  </ul></li>
+  <li><a href="#height-normality" id="toc-height-normality" class="nav-link" data-scroll-target="#height-normality">Height normality</a></li>
+  <li><a href="#the-model" id="toc-the-model" class="nav-link" data-scroll-target="#the-model">The Model</a>
+  <ul class="collapse">
+  <li><a href="#general-look-at-parameters" id="toc-general-look-at-parameters" class="nav-link" data-scroll-target="#general-look-at-parameters">General look at parameters</a></li>
+  </ul></li>
+  <li><a href="#the-linear-model" id="toc-the-linear-model" class="nav-link" data-scroll-target="#the-linear-model">The linear model</a></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
 <main class="content quarto-banner-title-block" id="quarto-document-content">
 

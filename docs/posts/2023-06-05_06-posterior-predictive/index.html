@@ -112,7 +112,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="twitter:card" content="summary_large_image">
 </head>
 
-<body class="nav-sidebar floating nav-fixed fullcontent">
+<body class="nav-sidebar floating nav-fixed">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -293,6 +293,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">Multicollinearity &amp; Post-treatment bias</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/2023-09-06_haunted-dag-3/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Colliders</span></a>
+  </div>
+</li>
       </ul>
   </li>
     </ul>
@@ -300,7 +306,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </nav>
 <div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#loading" id="toc-loading" class="nav-link active" data-scroll-target="#loading">Loading</a></li>
+  <li><a href="#prior-predictive" id="toc-prior-predictive" class="nav-link" data-scroll-target="#prior-predictive">Prior predictive</a></li>
+  <li><a href="#maximum-likelihood" id="toc-maximum-likelihood" class="nav-link" data-scroll-target="#maximum-likelihood">Maximum Likelihood</a></li>
+  <li><a href="#posterior-prediction" id="toc-posterior-prediction" class="nav-link" data-scroll-target="#posterior-prediction">Posterior Prediction</a></li>
+  <li><a href="#comparisons" id="toc-comparisons" class="nav-link" data-scroll-target="#comparisons">Comparisons</a></li>
+  <li><a href="#visualizing-the-posterior-prediction-process" id="toc-visualizing-the-posterior-prediction-process" class="nav-link" data-scroll-target="#visualizing-the-posterior-prediction-process">Visualizing the posterior prediction process</a></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
 <main class="content quarto-banner-title-block" id="quarto-document-content">
 
@@ -365,7 +384,7 @@ Listening
 <dl class="code-annotation-container-hidden code-annotation-container-grid">
 <dt data-target-cell="annotated-cell-3" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-annotation="1" data-code-lines="10" data-code-cell="annotated-cell-3">I’m going straight from generated samples to summarising for the distribution.</span>
+<span data-code-annotation="1" data-code-cell="annotated-cell-3" data-code-lines="10">I’m going straight from generated samples to summarising for the distribution.</span>
 </dd>
 </dl>
 </div>
@@ -383,7 +402,7 @@ Listening
 <dl class="code-annotation-container-hidden code-annotation-container-grid">
 <dt data-target-cell="annotated-cell-4" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-annotation="1" data-code-lines="8" data-code-cell="annotated-cell-4">I’ve moved <code>theme_no_y()</code> into <code>_defaults.R</code> which I source at the top.</span>
+<span data-code-annotation="1" data-code-cell="annotated-cell-4" data-code-lines="8">I’ve moved <code>theme_no_y()</code> into <code>_defaults.R</code> which I source at the top.</span>
 </dd>
 </dl>
 </div>

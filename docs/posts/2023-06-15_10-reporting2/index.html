@@ -110,7 +110,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="twitter:card" content="summary_large_image">
 </head>
 
-<body class="nav-sidebar floating nav-fixed fullcontent">
+<body class="nav-sidebar floating nav-fixed">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -291,6 +291,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">Multicollinearity &amp; Post-treatment bias</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/2023-09-06_haunted-dag-3/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Colliders</span></a>
+  </div>
+</li>
       </ul>
   </li>
     </ul>
@@ -298,7 +304,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </nav>
 <div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#loading" id="toc-loading" class="nav-link active" data-scroll-target="#loading">Loading</a></li>
+  <li><a href="#the-goal" id="toc-the-goal" class="nav-link" data-scroll-target="#the-goal">The goal</a></li>
+  <li><a href="#off-the-shelf-table-methods" id="toc-off-the-shelf-table-methods" class="nav-link" data-scroll-target="#off-the-shelf-table-methods">Off-the-shelf table methods</a></li>
+  <li><a href="#graphical-summary-methods" id="toc-graphical-summary-methods" class="nav-link" data-scroll-target="#graphical-summary-methods">Graphical summary methods</a></li>
+  <li><a href="#custom-table" id="toc-custom-table" class="nav-link" data-scroll-target="#custom-table">Custom table</a>
+  <ul class="collapse">
+  <li><a href="#getting-parameter-draws" id="toc-getting-parameter-draws" class="nav-link" data-scroll-target="#getting-parameter-draws">Getting parameter draws</a></li>
+  <li><a href="#getting-the-parameter-summaries" id="toc-getting-the-parameter-summaries" class="nav-link" data-scroll-target="#getting-the-parameter-summaries">Getting the parameter summaries</a></li>
+  <li><a href="#long-to-wide" id="toc-long-to-wide" class="nav-link" data-scroll-target="#long-to-wide">Long to wide</a></li>
+  <li><a href="#posterior-sd" id="toc-posterior-sd" class="nav-link" data-scroll-target="#posterior-sd">Posterior sd</a></li>
+  <li><a href="#the-gt-code" id="toc-the-gt-code" class="nav-link" data-scroll-target="#the-gt-code">The <code>{gt}</code> code</a></li>
+  </ul></li>
+  <li><a href="#was-it-worth-it" id="toc-was-it-worth-it" class="nav-link" data-scroll-target="#was-it-worth-it">Was it worth it?</a></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
 <main class="content quarto-banner-title-block" id="quarto-document-content">
 

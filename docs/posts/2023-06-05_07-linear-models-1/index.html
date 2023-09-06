@@ -115,7 +115,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="twitter:card" content="summary_large_image">
 </head>
 
-<body class="nav-sidebar floating nav-fixed fullcontent">
+<body class="nav-sidebar floating nav-fixed">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -296,6 +296,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">Multicollinearity &amp; Post-treatment bias</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../posts/2023-09-06_haunted-dag-3/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Colliders</span></a>
+  </div>
+</li>
       </ul>
   </li>
     </ul>
@@ -303,7 +309,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </nav>
 <div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#loading" id="toc-loading" class="nav-link active" data-scroll-target="#loading">Loading</a></li>
+  <li><a href="#simulating-a-galton-board" id="toc-simulating-a-galton-board" class="nav-link" data-scroll-target="#simulating-a-galton-board">Simulating a Galton Board</a></li>
+  <li><a href="#infinitesimal-galton-board" id="toc-infinitesimal-galton-board" class="nav-link" data-scroll-target="#infinitesimal-galton-board">Infinitesimal Galton Board</a>
+  <ul class="collapse">
+  <li><a href="#comparing-parameters" id="toc-comparing-parameters" class="nav-link" data-scroll-target="#comparing-parameters">Comparing parameters</a></li>
+  </ul></li>
+  <li><a href="#model-diagrams" id="toc-model-diagrams" class="nav-link" data-scroll-target="#model-diagrams">Model Diagrams</a>
+  <ul class="collapse">
+  <li><a href="#another-example." id="toc-another-example." class="nav-link" data-scroll-target="#another-example.">Another example.</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
 <main class="content quarto-banner-title-block" id="quarto-document-content">
 
@@ -502,15 +525,15 @@ Listening
 <dl class="code-annotation-container-hidden code-annotation-container-grid">
 <dt data-target-cell="annotated-cell-10" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-annotation="1" data-code-lines="6,7,8,9" data-code-cell="annotated-cell-10">Calculating the distribution parameters for each step grouping.</span>
+<span data-code-lines="6,7,8,9" data-code-cell="annotated-cell-10" data-code-annotation="1">Calculating the distribution parameters for each step grouping.</span>
 </dd>
 <dt data-target-cell="annotated-cell-10" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-annotation="2" data-code-lines="15" data-code-cell="annotated-cell-10">Mapping over the distribution parameters to get density values in a tibble.</span>
+<span data-code-lines="15" data-code-cell="annotated-cell-10" data-code-annotation="2">Mapping over the distribution parameters to get density values in a tibble.</span>
 </dd>
 <dt data-target-cell="annotated-cell-10" data-target-annotation="3">3</dt>
 <dd>
-<span data-code-annotation="3" data-code-lines="28,29" data-code-cell="annotated-cell-10">For plotting over the <code>stat_slab()</code> output, normalizing the density to max out at 1.</span>
+<span data-code-lines="28,29" data-code-cell="annotated-cell-10" data-code-annotation="3">For plotting over the <code>stat_slab()</code> output, normalizing the density to max out at 1.</span>
 </dd>
 </dl>
 </div>
