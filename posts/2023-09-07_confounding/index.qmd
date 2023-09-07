@@ -1,5 +1,5 @@
 ---
-title: "Where I do a lot of work and don't understand colliders an y better."
+title: "Where I do a lot of work and don't understand colliders any better."
 order: 18
 date: 2023-09-06
 twitter-card: true
